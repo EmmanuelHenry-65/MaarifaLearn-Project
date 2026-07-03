@@ -8,9 +8,16 @@ export default function AITutor() {
   return (
     <div className="glass-card p-5 relative overflow-hidden">
       {/* Sparkles */}
-      <div className="absolute top-3 right-3 text-cyan-400 text-[10px] animate-pulse">✦</div>
-      <div className="absolute top-8 right-8 text-cyan-300 text-[6px] animate-pulse" style={{ animationDelay: '0.5s' }}>✦</div>
-      
+      <div className="absolute top-3 right-3 text-cyan-400 text-[10px] animate-pulse">
+        ✦
+      </div>
+      <div
+        className="absolute top-8 right-8 text-cyan-300 text-[6px] animate-pulse"
+        style={{ animationDelay: "0.5s" }}
+      >
+        ✦
+      </div>
+
       <div className="flex items-start justify-between mb-3">
         <div>
           <h3 className="text-white font-bold text-base">Ask your AI Tutor</h3>
@@ -53,7 +60,15 @@ export default function AITutor() {
               className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl bg-[rgba(17,24,50,0.5)] border border-[rgba(56,78,135,0.2)] text-gray-400 text-xs hover:border-cyan-500/30 hover:text-gray-300 transition-all text-left"
             >
               <span className="leading-relaxed">{s}</span>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-cyan-500 flex-shrink-0 ml-2">
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                className="text-cyan-500 flex-shrink-0 ml-2"
+              >
                 <line x1="5" y1="12" x2="19" y2="12" />
                 <polyline points="12,5 19,12 12,19" />
               </svg>
