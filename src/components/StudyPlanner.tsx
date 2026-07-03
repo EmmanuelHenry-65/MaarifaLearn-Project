@@ -1,9 +1,4 @@
-import { todaySchedule, getSubject } from '../data/subjects';
-
 export default function StudyPlanner() {
-  // Pick a currently/upcoming session for the dashboard quick view
-  const upcoming = todaySchedule.find((s) => s.status === 'Upcoming') || todaySchedule[0];
-  const sub = getSubject(upcoming.subjectId);
   return (
     <div className="glass-card p-5">
       <div className="flex items-center justify-between mb-4">
@@ -20,10 +15,10 @@ export default function StudyPlanner() {
       </div>
       <h4 className="text-gray-300 text-sm font-semibold mb-3">Today's Schedule</h4>
       <div className="flex items-center gap-2 p-3 rounded-xl bg-[rgba(17,24,50,0.5)] border border-[rgba(56,78,135,0.15)]">
-        <span className="text-gray-400 text-xs font-medium">{upcoming.time}</span>
-        <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${sub.iconBg}`}>{sub.shortName}</span>
+        <span className="text-gray-400 text-xs font-medium">4:00 PM – 5:00 PM</span>
+        <span className="px-2 py-0.5 rounded-full bg-green-500/15 text-green-400 text-[10px] font-semibold">Biology</span>
         <span className="text-gray-400 text-xs flex items-center gap-1">
-          {upcoming.topic}
+          Photosynthesis
           <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <polyline points="9,18 15,12 9,6" />
           </svg>
