@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import AppLayout from './AppLayout';
+import { ThemeProvider } from './context/ThemeContext';
 import DashboardPage from './pages/DashboardPage';
 import MyLearningPage from './pages/MyLearningPage';
 import SubjectsPage from './pages/SubjectsPage';
@@ -13,22 +14,24 @@ import SettingsPage from './pages/SettingsPage';
 
 export default function App() {
   return (
-    <BrowserRouter>
-      <Routes>
-        <Route element={<AppLayout />}>
-          <Route path="/" element={<DashboardPage />} />
-          <Route path="/my-learning" element={<MyLearningPage />} />
-          <Route path="/subjects" element={<SubjectsPage />} />
-          <Route path="/subjects/:subjectId" element={<SubjectDetailPage />} />
-          <Route path="/ai-tutor" element={<AITutorPage />} />
-          <Route path="/study-planner" element={<StudyPlannerPage />} />
-          <Route path="/past-papers" element={<PastPapersPage />} />
-          <Route path="/resources" element={<ResourcesPage />} />
-          <Route path="/accomplishments" element={<AccomplishmentsPage />} />
-          <Route path="/settings" element={<SettingsPage />} />
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Route>
-      </Routes>
-    </BrowserRouter>
+    <ThemeProvider>
+      <BrowserRouter>
+        <Routes>
+          <Route element={<AppLayout />}>
+            <Route path="/" element={<DashboardPage />} />
+            <Route path="/my-learning" element={<MyLearningPage />} />
+            <Route path="/subjects" element={<SubjectsPage />} />
+            <Route path="/subjects/:subjectId" element={<SubjectDetailPage />} />
+            <Route path="/ai-tutor" element={<AITutorPage />} />
+            <Route path="/study-planner" element={<StudyPlannerPage />} />
+            <Route path="/past-papers" element={<PastPapersPage />} />
+            <Route path="/resources" element={<ResourcesPage />} />
+            <Route path="/accomplishments" element={<AccomplishmentsPage />} />
+            <Route path="/settings" element={<SettingsPage />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Route>
+        </Routes>
+      </BrowserRouter>
+    </ThemeProvider>
   );
 }

@@ -1,9 +1,21 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
+import { useTheme } from '../context/ThemeContext';
 
 interface SidebarProps {
   activeTab: string;
 }
+
+const ThemeSpecificIcon = ({ theme, isActive, originalIcon }: { theme: 'dark' | 'light', isActive: boolean, originalIcon: React.ReactNode }) => {
+  if (theme === 'dark') return originalIcon;
+  
+  // Light mode colors
+  return (
+    <span className={isActive ? 'text-cyan-600' : 'text-slate-500 group-hover:text-cyan-500 transition-colors'}>
+      {originalIcon}
+    </span>
+  );
+};
 
 const menuItems = [
   { icon: 'home', label: 'Dashboard', path: '/' },
@@ -80,8 +92,10 @@ const icons: Record<string, React.JSX.Element> = {
 };
 
 export default function Sidebar(_: SidebarProps) {
+  const { theme } = useTheme();
+  
   return (
-    <aside className="fixed left-0 top-0 bottom-0 w-[200px] flex flex-col bg-gradient-to-b from-[#0d1225] to-[#0a0e1a] border-r border-[rgba(56,78,135,0.2)] z-50">
+    <aside className={`fixed left-0 top-0 bottom-0 w-[200px] flex flex-col border-r z-50 ${theme === 'light' ? 'bg-gradient-to-b from-white to-slate-50 border-slate-200 shadow-xl shadow-slate-200/50' : 'bg-gradient-to-b from-[#0d1225] to-[#0a0e1a] border-[rgba(56,78,135,0.2)]'}`}>
       {/* Logo */}
       <div className="flex items-center gap-2.5 px-5 py-5 flex-shrink-0">
         <div className="relative w-9 h-9 rounded-xl bg-gradient-to-br from-teal-400 to-blue-600 flex items-center justify-center shadow-lg shadow-teal-500/20">
@@ -104,18 +118,24 @@ export default function Sidebar(_: SidebarProps) {
             to={item.path}
             end={item.path === '/'}
             className={({ isActive }) =>
-              `sidebar-item w-full flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] font-medium transition-all ${
+              `sidebar-item w-full flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] font-medium transition-all group ${
                 isActive
-                  ? 'active text-cyan-400 bg-cyan-400/10 border-l-[3px] border-cyan-400 font-bold'
-                  : 'text-gray-400 hover:text-gray-200 border-l-[3px] border-transparent'
+                  ? theme === 'light' 
+                    ? 'active text-cyan-700 bg-cyan-50 border-l-[3px] border-cyan-600 font-bold'
+                    : 'active text-cyan-400 bg-cyan-400/10 border-l-[3px] border-cyan-400 font-bold'
+                  : theme === 'light'
+                    ? 'text-slate-600 hover:text-cyan-600 border-l-[3px] border-transparent'
+                    : 'text-gray-400 hover:text-gray-200 border-l-[3px] border-transparent'
               }`
             }
           >
             {({ isActive }) => (
               <>
-                <span className={isActive ? 'text-cyan-400' : 'text-gray-500'}>
-                  {icons[item.icon]}
-                </span>
+                <ThemeSpecificIcon 
+                  theme={theme} 
+                  isActive={isActive} 
+                  originalIcon={icons[item.icon]} 
+                />
                 {item.label}
               </>
             )}
@@ -124,14 +144,14 @@ export default function Sidebar(_: SidebarProps) {
       </nav>
 
       {/* Profile & Motivation container at the bottom */}
-      <div className="flex-shrink-0 p-3 space-y-3 bg-gradient-to-t from-[#0a0e1a] via-[#0d1225] to-transparent">
+      <div className={`flex-shrink-0 p-3 space-y-3 bg-gradient-to-t to-transparent ${theme === 'light' ? 'from-slate-100/50' : 'from-[#0a0e1a] via-[#0d1225]'}`}>
         {/* Motivational Card */}
-        <div className="p-3.5 rounded-xl bg-gradient-to-br from-[#1a1040] to-[#15103a] border border-[rgba(100,60,180,0.3)] relative overflow-hidden">
+        <div className={`p-3.5 rounded-xl relative overflow-hidden ${theme === 'light' ? 'bg-gradient-to-br from-cyan-600 to-blue-700 shadow-lg shadow-cyan-200' : 'bg-gradient-to-br from-[#1a1040] to-[#15103a] border border-[rgba(100,60,180,0.3)]'}`}>
           <div className="text-center mb-1">
             <span className="text-2xl">🏆</span>
           </div>
           <p className="text-white font-bold text-xs text-center">Keep Learning!</p>
-          <p className="text-gray-400 text-[10px] text-center mt-1 leading-relaxed">
+          <p className="text-white/80 text-[10px] text-center mt-1 leading-relaxed">
             Consistency today, excellence tomorrow.
           </p>
           <div className="absolute top-1 right-2 text-yellow-400 text-[8px]">✦</div>
@@ -139,8 +159,8 @@ export default function Sidebar(_: SidebarProps) {
         </div>
 
         {/* Small profile item as in mockup 2 */}
-        <div className="flex items-center gap-2.5 p-2 rounded-xl bg-[rgba(17,24,50,0.5)] border border-[rgba(56,78,135,0.15)]">
-          <div className="w-7 h-7 rounded-full overflow-hidden flex-shrink-0 ring-1 ring-[rgba(56,78,135,0.3)]">
+        <div className={`flex items-center gap-2.5 p-2 rounded-xl border transition-all ${theme === 'light' ? 'bg-white border-slate-200 shadow-sm' : 'bg-[rgba(17,24,50,0.5)] border-[rgba(56,78,135,0.15)]'}`}>
+          <div className={`w-7 h-7 rounded-full overflow-hidden flex-shrink-0 ring-1 ${theme === 'light' ? 'ring-slate-200' : 'ring-[rgba(56,78,135,0.3)]'}`}>
             <img
               src="/images/avatar-emmanuel.jpg"
               alt="Emmanuel"
@@ -148,7 +168,7 @@ export default function Sidebar(_: SidebarProps) {
             />
           </div>
           <div className="text-left flex-1 min-w-0">
-            <p className="text-white text-xs font-semibold leading-tight truncate">Emmanuel</p>
+            <p className={`text-xs font-semibold leading-tight truncate ${theme === 'light' ? 'text-slate-800' : 'text-white'}`}>Emmanuel</p>
             <p className="text-gray-500 text-[10px] leading-tight truncate">Learner</p>
           </div>
           <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-gray-500 mr-0.5">

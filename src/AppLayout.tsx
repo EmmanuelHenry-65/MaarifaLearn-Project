@@ -1,6 +1,7 @@
 import { Outlet, useLocation } from 'react-router-dom';
 import Sidebar from './components/Sidebar';
 import TopNav from './components/TopNav';
+import { useTheme } from './context/ThemeContext';
 
 const routeToTitle: Record<string, { title: string; subtitle: string }> = {
   '/': { title: 'Good morning, Emmanuel! 👋', subtitle: '"Every day is a step closer to your goals."' },
@@ -28,6 +29,7 @@ const pathToLabel: Record<string, string> = {
 
 export default function AppLayout() {
   const location = useLocation();
+  const { theme } = useTheme();
 
   // For subject detail pages like /subjects/mathematics, treat as Subjects
   const isSubjectDetail = location.pathname.startsWith('/subjects/');
@@ -37,10 +39,10 @@ export default function AppLayout() {
   const activeTab = pathToLabel[key] || 'Dashboard';
 
   return (
-    <div className="min-h-screen w-full bg-[#0a0e1a] text-gray-200 flex overflow-x-hidden">
+    <div className={`min-h-screen w-full flex overflow-x-hidden transition-colors duration-300 ${theme === 'light' ? 'bg-slate-50 text-slate-900' : 'bg-[#0a0e1a] text-gray-200'}`}>
       {/* Background subtle gradient overlay */}
-      <div className="fixed inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(6,182,212,0.04)_0%,transparent_50%)] pointer-events-none" />
-      <div className="fixed inset-0 bg-[radial-gradient(ellipse_at_bottom_left,rgba(139,92,246,0.03)_0%,transparent_50%)] pointer-events-none" />
+      <div className={`fixed inset-0 pointer-events-none transition-opacity duration-500 ${theme === 'light' ? 'opacity-20 bg-[radial-gradient(ellipse_at_top_right,rgba(6,182,212,0.1)_0%,transparent_50%)]' : 'bg-[radial-gradient(ellipse_at_top_right,rgba(6,182,212,0.04)_0%,transparent_50%)]'}`} />
+      <div className={`fixed inset-0 pointer-events-none transition-opacity duration-500 ${theme === 'light' ? 'opacity-10 bg-[radial-gradient(ellipse_at_bottom_left,rgba(139,92,246,0.05)_0%,transparent_50%)]' : 'bg-[radial-gradient(ellipse_at_bottom_left,rgba(139,92,246,0.03)_0%,transparent_50%)]'}`} />
 
       <Sidebar activeTab={activeTab} />
 

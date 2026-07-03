@@ -1,3 +1,5 @@
+import { useTheme } from '../context/ThemeContext';
+
 interface Subject {
   name: string;
   progress: number;
@@ -16,7 +18,7 @@ const subjects: Subject[] = [
   { name: 'English', progress: 68, icon: '📝', color: '#f97316', bgColor: 'from-orange-500/20 to-orange-600/10', status: 'Good', statusColor: 'text-orange-400' },
 ];
 
-function CircularProgress({ progress, color, size = 70 }: { progress: number; color: string; size?: number }) {
+function CircularProgress({ progress, color, size = 70, light }: { progress: number; color: string; size?: number; light: boolean }) {
   const strokeWidth = 4;
   const radius = (size - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
@@ -29,7 +31,7 @@ function CircularProgress({ progress, color, size = 70 }: { progress: number; co
           cx={size / 2}
           cy={size / 2}
           r={radius}
-          stroke="rgba(56, 78, 135, 0.25)"
+          stroke={light ? 'rgba(148, 163, 184, 0.25)' : 'rgba(56, 78, 135, 0.25)'}
           strokeWidth={strokeWidth}
           fill="none"
         />
@@ -47,29 +49,32 @@ function CircularProgress({ progress, color, size = 70 }: { progress: number; co
         />
       </svg>
       <div className="absolute inset-0 flex items-center justify-center">
-        <span className="text-white font-bold text-sm">{progress}%</span>
+        <span className={`font-bold text-sm ${light ? 'text-slate-900' : 'text-white'}`}>{progress}%</span>
       </div>
     </div>
   );
 }
 
 export default function SubjectProgress() {
+  const { theme } = useTheme();
+  const light = theme === 'light';
+
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-white font-bold text-lg">My Subjects</h3>
-        <button className="text-cyan-400 text-xs font-medium hover:text-cyan-300 transition-colors">View all</button>
+        <h3 className={`font-bold text-lg ${light ? 'text-slate-900' : 'text-white'}`}>My Subjects</h3>
+        <button className="text-cyan-500 text-xs font-medium hover:text-cyan-400 transition-colors">View all</button>
       </div>
       <div className="grid grid-cols-5 gap-3">
         {subjects.map((subject) => (
           <div key={subject.name} className="subject-card p-4 flex flex-col items-center text-center">
             <div className="flex items-center gap-1.5 mb-3">
               <span className="text-sm">{subject.icon}</span>
-              <span className="text-white text-xs font-semibold">{subject.name}</span>
+              <span className={`text-xs font-semibold ${light ? 'text-slate-800' : 'text-white'}`}>{subject.name}</span>
             </div>
-            <CircularProgress progress={subject.progress} color={subject.color} />
+            <CircularProgress progress={subject.progress} color={subject.color} light={light} />
             <p className={`text-[11px] font-medium mt-2 ${subject.statusColor}`}>{subject.status}</p>
-            <button className="flex items-center gap-1 text-gray-400 text-[11px] mt-1.5 hover:text-cyan-400 transition-colors">
+            <button className={`flex items-center gap-1 text-[11px] mt-1.5 hover:text-cyan-400 transition-colors ${light ? 'text-slate-500' : 'text-gray-400'}`}>
               Continue
               <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <line x1="5" y1="12" x2="19" y2="12" />

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { ThemeToggleCompact } from '../components/ThemeToggle';
 
 const tabs = ['Account', 'Preferences', 'Notifications', 'Privacy & Security', 'Appearance', 'About'] as const;
 
@@ -130,6 +131,7 @@ export default function SettingsView() {
         <div className="glass-card p-5">
           <h3 className="text-white font-bold text-base mb-4">Quick Settings</h3>
           <div className="space-y-3">
+            <ThemeToggleCompact />
             {quickSettings.map((item) => (
               <div key={item.label} className="flex items-center justify-between gap-3">
                 <div className="flex items-center gap-3">
