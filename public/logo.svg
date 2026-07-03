@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
+  <defs>
+    <linearGradient id="bookLeft" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#2dd4bf" />
+      <stop offset="50%" stop-color="#3b82f6" />
+      <stop offset="100%" stop-color="#1d4ed8" />
+    </linearGradient>
+    <linearGradient id="bookRight" x1="100%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#d946ef" />
+      <stop offset="50%" stop-color="#8b5cf6" />
+      <stop offset="100%" stop-color="#6d28d9" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Background (transparent) -->
+  <rect width="512" height="512" fill="none" />
+
+  <!-- Star -->
+  <path d="M256 60 C256 60 268 90 298 100 C268 100 256 130 256 130 C256 130 244 100 214 100 C244 90 256 60 256 60 Z" fill="#0d9488"/>
+
+  <!-- M / Person Shape -->
+  <path d="M160 220 L160 140 C160 125 175 110 190 110 L230 110 L256 160 L282 110 L322 110 C337 110 352 125 352 140 L352 220 L312 220 L312 160 L256 200 L200 160 L200 220 Z" fill="#0f172a"/>
+  <circle cx="256" cy="145" r="18" fill="#0f172a"/>
+
+  <!-- Book Left Pages -->
+  <path d="M256 340 C200 340 120 300 90 260 C130 270 180 290 230 320 C180 310 130 280 90 230 C140 250 200 290 256 330 Z" fill="url(#bookLeft)"/>
+  <path d="M256 330 C210 330 140 295 110 260 C145 270 190 285 235 310 C190 300 150 275 110 235 C155 255 210 285 256 320 Z" fill="url(#bookLeft)" opacity="0.8"/>
+
+  <!-- Book Right Pages -->
+  <path d="M256 340 C312 340 392 300 422 260 C382 270 332 290 282 320 C332 310 382 280 422 230 C372 250 312 290 256 330 Z" fill="url(#bookRight)"/>
+  <path d="M256 330 C302 330 372 295 402 260 C367 270 322 285 277 310 C322 300 362 275 402 235 C357 255 302 285 256 320 Z" fill="url(#bookRight)" opacity="0.8"/>
+
+  <!-- Text -->
+  <text x="256" y="420" font-family="system-ui, -apple-system, sans-serif" font-weight="900" font-size="72" text-anchor="middle" fill="#0f172a" letter-spacing="-1">Maarifa <tspan fill="#0d9488">Learn</tspan></text>
+  
+  <!-- Tagline lines -->
+  <line x1="60" y1="460" x2="110" y2="460" stroke="#0d9488" stroke-width="6" stroke-linecap="round"/>
+  <text x="256" y="470" font-family="system-ui, -apple-system, sans-serif" font-size="24" text-anchor="middle" fill="#0f172a" letter-spacing="0.5">Learn Today. Lead Tomorrow.</text>
+  <line x1="402" y1="460" x2="452" y2="460" stroke="#0d9488" stroke-width="6" stroke-linecap="round"/>
+</svg>
