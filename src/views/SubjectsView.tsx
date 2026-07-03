@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useTheme } from '../context/ThemeContext';
 
 const subjectsList = [
   // Mandatory
@@ -39,6 +40,11 @@ const performanceStats = [
 export default function SubjectsView() {
   const [activeSubTab, setActiveSubTab] = useState<'All Subjects' | 'Core Subjects' | 'Optional Subjects'>('All Subjects');
   const [searchQuery, setSearchQuery] = useState('');
+  const { theme } = useTheme();
+  const rowBg = theme === 'light' ? 'bg-white border-slate-200' : 'bg-[rgba(17,24,50,0.5)] border-[rgba(56,78,135,0.15)]';
+  const textColor = theme === 'light' ? 'text-slate-900' : 'text-white';
+  const mutedColor = theme === 'light' ? 'text-slate-500' : 'text-gray-500';
+  const subTextColor = theme === 'light' ? 'text-slate-600' : 'text-gray-400';
 
   const filteredSubjects = subjectsList.filter((sub) => {
     const matchesTab =
@@ -158,38 +164,38 @@ export default function SubjectsView() {
         {/* Recently Accessed */}
         <div className="glass-card p-5">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-white font-bold text-base">Recently Accessed</h3>
-            <button className="text-cyan-400 text-xs font-medium hover:text-cyan-300 transition-colors">View all</button>
+            <h3 className={`font-bold text-base ${textColor}`}>Recently Accessed</h3>
+            <button className="text-cyan-600 text-xs font-medium hover:text-cyan-700 transition-colors">View all</button>
           </div>
           <div className="space-y-2.5">
             {recentlyAccessed.map((lesson, i) => (
-              <div key={i} className="flex items-center justify-between p-3 rounded-xl bg-[rgba(17,24,50,0.5)] border border-[rgba(56,78,135,0.15)] hover:border-[rgba(56,78,135,0.3)] transition-all">
+              <div key={i} className={`flex items-center justify-between p-3 rounded-xl border hover:border-cyan-500/30 transition-all ${rowBg}`}>
                 <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-lg bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-400 text-sm font-semibold">
+                  <div className="w-8 h-8 rounded-lg bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-600 text-sm font-semibold">
                     📖
                   </div>
                   <div>
-                    <p className="text-white text-sm font-semibold leading-tight">{lesson.topic}</p>
-                    <p className="text-gray-500 text-[11px] leading-tight mt-0.5">{lesson.subject} • {lesson.form}</p>
+                    <p className={`text-sm font-semibold leading-tight ${textColor}`}>{lesson.topic}</p>
+                    <p className={`${mutedColor} text-[11px] leading-tight mt-0.5`}>{lesson.subject} • {lesson.form}</p>
                   </div>
                 </div>
 
                 <div className="flex items-center gap-6">
                   {/* Progress bar */}
                   <div className="flex items-center gap-2 w-44">
-                    <div className="flex-1 h-1.5 rounded-full bg-[rgba(56,78,135,0.2)] overflow-hidden">
+                    <div className={`flex-1 h-1.5 rounded-full overflow-hidden ${theme === 'light' ? 'bg-slate-200' : 'bg-[rgba(56,78,135,0.2)]'}`}>
                       <div className={`h-full rounded-full ${lesson.barColor}`} style={{ width: `${lesson.progress}%` }} />
                     </div>
-                    <span className="text-gray-300 text-xs font-semibold w-8 text-right">{lesson.progress}%</span>
+                    <span className={`${subTextColor} text-xs font-semibold w-8 text-right`}>{lesson.progress}%</span>
                   </div>
 
                   {/* Continue Button */}
-                  <button className="px-4 py-1.5 rounded-lg bg-[rgba(34,211,238,0.06)] border border-cyan-500/20 text-cyan-400 text-xs font-bold hover:bg-cyan-500/10 transition-colors">
+                  <button className="px-4 py-1.5 rounded-lg bg-cyan-500/10 border border-cyan-500/20 text-cyan-600 text-xs font-bold hover:bg-cyan-500/20 transition-colors">
                     Continue
                   </button>
 
                   {/* Play Button */}
-                  <button className="w-6 h-6 rounded-full bg-cyan-500/10 border border-cyan-500/25 flex items-center justify-center text-cyan-400 hover:bg-cyan-500 hover:text-white transition-colors">
+                  <button className="w-6 h-6 rounded-full bg-cyan-500/10 border border-cyan-500/25 flex items-center justify-center text-cyan-600 hover:bg-cyan-500 hover:text-white transition-colors">
                     <svg width="8" height="8" viewBox="0 0 24 24" fill="currentColor">
                       <polygon points="5,3 19,12 5,21" />
                     </svg>

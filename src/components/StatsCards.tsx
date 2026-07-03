@@ -2,8 +2,9 @@ import { useTheme } from '../context/ThemeContext';
 
 export default function StatsCards() {
   const { theme } = useTheme();
-  const primaryText = theme === 'light' ? 'text-slate-900' : 'text-white';
-  const mutedText = theme === 'light' ? 'text-slate-500' : 'text-gray-500';
+  const textColor = theme === 'light' ? 'text-slate-900' : 'text-white';
+  const subTextColor = theme === 'light' ? 'text-slate-600' : 'text-gray-400';
+  const progressBarBg = theme === 'light' ? 'bg-slate-200' : 'bg-[rgba(56,78,135,0.3)]';
 
   return (
     <div className="grid grid-cols-4 gap-4">
@@ -13,9 +14,9 @@ export default function StatsCards() {
           <span className="text-lg">🔥</span>
         </div>
         <div>
-          <p className={`text-xl font-bold leading-tight ${primaryText}`}>7</p>
-          <p className="text-xs font-semibold mt-0.5 text-orange-400">Day Streak</p>
-          <p className={`text-[11px] mt-0.5 ${mutedText}`}>Keep it up!</p>
+          <p className={`text-xl font-bold leading-tight ${textColor}`}>7</p>
+          <p className="text-xs font-semibold mt-0.5 text-orange-500">Day Streak</p>
+          <p className={`text-[11px] mt-0.5 ${subTextColor}`}>Keep it up!</p>
         </div>
       </div>
 
@@ -25,10 +26,10 @@ export default function StatsCards() {
           <span className="text-white font-black text-[11px]">XP</span>
         </div>
         <div className="flex-1 min-w-0">
-          <p className={`text-xl font-bold leading-tight ${primaryText}`}>2,560</p>
-          <p className="text-xs font-semibold mt-0.5 text-cyan-400">Total XP</p>
-          <p className={`text-[11px] mt-0.5 ${mutedText}`}>Next level: 3,000 XP</p>
-          <div className={`mt-1.5 h-1 rounded-full overflow-hidden ${theme === 'light' ? 'bg-slate-200' : 'bg-[rgba(56,78,135,0.3)]'}`}>
+          <p className={`text-xl font-bold leading-tight ${textColor}`}>2,560</p>
+          <p className="text-xs font-semibold mt-0.5 text-cyan-600">Total XP</p>
+          <p className={`text-[11px] mt-0.5 ${subTextColor}`}>Next level: 3,000 XP</p>
+          <div className={`mt-1.5 h-1 rounded-full overflow-hidden ${progressBarBg}`}>
             <div className="h-full rounded-full bg-gradient-to-r from-cyan-500 to-cyan-400" style={{ width: '85%' }} />
           </div>
         </div>
@@ -40,9 +41,9 @@ export default function StatsCards() {
           <span className="text-lg">🏆</span>
         </div>
         <div>
-          <p className={`text-xl font-bold leading-tight ${primaryText}`}>18</p>
-          <p className="text-xs font-semibold mt-0.5 text-yellow-500">Your Rank</p>
-          <p className={`text-[11px] mt-0.5 ${mutedText}`}>Top 5% learners</p>
+          <p className={`text-xl font-bold leading-tight ${textColor}`}>18</p>
+          <p className="text-xs font-semibold mt-0.5 text-amber-600">Your Rank</p>
+          <p className={`text-[11px] mt-0.5 ${subTextColor}`}>Top 5% learners</p>
         </div>
       </div>
 
@@ -55,9 +56,9 @@ export default function StatsCards() {
           </svg>
         </div>
         <div>
-          <p className={`text-xl font-bold leading-tight ${primaryText}`}>34h 20m</p>
-          <p className="text-xs font-semibold mt-0.5 text-purple-400">Study Time</p>
-          <p className={`text-[11px] mt-0.5 ${mutedText}`}>This week</p>
+          <p className={`text-xl font-bold leading-tight ${textColor}`}>34h 20m</p>
+          <p className="text-xs font-semibold mt-0.5 text-purple-500">Study Time</p>
+          <p className={`text-[11px] mt-0.5 ${subTextColor}`}>This week</p>
         </div>
       </div>
     </div>

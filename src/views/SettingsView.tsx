@@ -32,11 +32,11 @@ function Toggle({ enabled }: { enabled: boolean }) {
   );
 }
 
-function Field({ label, value, icon }: { label: string; value: string; icon: string }) {
+function Field({ label, value, icon, fieldBg }: { label: string; value: string; icon: string; fieldBg: string }) {
   return (
     <div>
       <label className="block text-gray-500 text-xs font-medium mb-2">{label}</label>
-      <div className="flex items-center gap-2 px-3 py-3 rounded-lg bg-[rgba(17,24,50,0.55)] border border-[rgba(56,78,135,0.2)] text-gray-200 text-sm">
+      <div className={`flex items-center gap-2 px-3 py-3 rounded-lg border text-gray-200 text-sm ${fieldBg}`}>
         <span className="text-gray-500 text-sm">{icon}</span>
         <span>{value}</span>
       </div>
@@ -44,8 +44,15 @@ function Field({ label, value, icon }: { label: string; value: string; icon: str
   );
 }
 
+import { useTheme } from '../context/ThemeContext';
+
 export default function SettingsView() {
   const [activeTab, setActiveTab] = useState<typeof tabs[number]>('Account');
+  const { theme } = useTheme();
+
+  const sectionBg = theme === 'light' ? 'bg-slate-50 border-slate-200' : 'bg-[rgba(17,24,50,0.42)] border-[rgba(56,78,135,0.18)]';
+  const fieldBg = theme === 'light' ? 'bg-white border-slate-200' : 'bg-[rgba(17,24,50,0.55)] border-[rgba(56,78,135,0.2)]';
+  const titleColor = theme === 'light' ? 'text-slate-900' : 'text-white';
 
   return (
     <div className="flex gap-6 mt-2 flex-1 min-h-0">
@@ -56,7 +63,7 @@ export default function SettingsView() {
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
-                className={`text-sm font-semibold pb-4 border-b-2 transition-all whitespace-nowrap ${activeTab === tab ? 'text-cyan-400 border-cyan-400' : 'text-gray-500 border-transparent hover:text-gray-300'}`}
+                className={`text-sm font-semibold pb-4 border-b-2 transition-all whitespace-nowrap ${activeTab === tab ? 'text-cyan-600 border-cyan-600 font-bold' : 'text-gray-500 border-transparent hover:text-gray-300'}`}
               >
                 {tab}
               </button>
@@ -64,10 +71,10 @@ export default function SettingsView() {
           </div>
 
           <div className="p-5 space-y-5">
-            <div className="rounded-xl bg-[rgba(17,24,50,0.42)] border border-[rgba(56,78,135,0.18)] p-5">
+            <div className={`rounded-xl border p-5 ${sectionBg}`}>
               <div className="flex items-start justify-between mb-5">
                 <div>
-                  <h3 className="text-white font-bold text-base">Account Information</h3>
+                  <h3 className={`font-bold text-base ${titleColor}`}>Account Information</h3>
                   <p className="text-gray-500 text-xs mt-1">Update your personal details and account information.</p>
                 </div>
                 <button className="px-4 py-2 rounded-lg bg-purple-500/10 border border-purple-500/30 text-purple-400 text-xs font-bold hover:bg-purple-500/20 transition-colors">
@@ -75,19 +82,19 @@ export default function SettingsView() {
                 </button>
               </div>
               <div className="grid grid-cols-2 gap-4">
-                <Field label="Full Name" value="Emmanuel Muuo Mutunga" icon="♙" />
-                <Field label="Email Address" value="emmanuel.mutunga@example.com" icon="✉" />
-                <Field label="Username" value="emmanuel_254" icon="♙" />
-                <Field label="Grade" value="Grade 10" icon="⌂" />
-                <Field label="Curriculum" value="Kenya (CBC)" icon="📖" />
-                <Field label="Learning Pathway" value="STEM (Science, Technology, Engineering & Mathematics)" icon="⚙" />
+                <Field label="Full Name" value="Emmanuel Muuo Mutunga" icon="♙" fieldBg={fieldBg} />
+                <Field label="Email Address" value="emmanuel.mutunga@example.com" icon="✉" fieldBg={fieldBg} />
+                <Field label="Username" value="emmanuel_254" icon="♙" fieldBg={fieldBg} />
+                <Field label="Grade" value="Grade 10" icon="⌂" fieldBg={fieldBg} />
+                <Field label="Curriculum" value="Kenya (CBC)" icon="📖" fieldBg={fieldBg} />
+                <Field label="Learning Pathway" value="STEM (Science, Technology, Engineering & Mathematics)" icon="⚙" fieldBg={fieldBg} />
               </div>
             </div>
 
-            <div className="rounded-xl bg-[rgba(17,24,50,0.42)] border border-[rgba(56,78,135,0.18)] p-5">
+            <div className={`rounded-xl border p-5 ${sectionBg}`}>
               <div className="flex items-start justify-between mb-5">
                 <div>
-                  <h3 className="text-white font-bold text-base">Change Password</h3>
+                  <h3 className={`font-bold text-base ${titleColor}`}>Change Password</h3>
                   <p className="text-gray-500 text-xs mt-1">Choose a strong password to keep your account secure.</p>
                 </div>
                 <button className="px-4 py-2 rounded-lg bg-purple-500/10 border border-purple-500/30 text-purple-400 text-xs font-bold hover:bg-purple-500/20 transition-colors">
@@ -98,7 +105,7 @@ export default function SettingsView() {
                 {['Current Password', 'New Password', 'Confirm New Password'].map((label) => (
                   <div key={label}>
                     <label className="block text-gray-500 text-xs font-medium mb-2">{label}</label>
-                    <div className="flex items-center gap-2 px-3 py-3 rounded-lg bg-[rgba(17,24,50,0.55)] border border-[rgba(56,78,135,0.2)] text-gray-500 text-xs">
+                    <div className={`flex items-center gap-2 px-3 py-3 rounded-lg border text-gray-500 text-xs ${fieldBg}`}>
                       <span>🔒</span>
                       <span>{label === 'Current Password' ? 'Enter current password' : label === 'New Password' ? 'Enter new password' : 'Confirm new password'}</span>
                       <span className="ml-auto">◌</span>

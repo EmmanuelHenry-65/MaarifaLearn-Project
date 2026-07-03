@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTheme } from '../context/ThemeContext';
 
 const continueLearningCards = [
   {
@@ -115,6 +116,12 @@ const upcomingLessons = [
 
 export default function MyLearningView() {
   const [activeTab, setActiveTab] = useState<'In Progress' | 'Completed' | 'Bookmarked'>('In Progress');
+  const { theme } = useTheme();
+  const rowBg = theme === 'light' ? 'bg-white border-slate-200' : 'bg-[rgba(17,24,50,0.5)] border-[rgba(56,78,135,0.15)]';
+  const cardBg = theme === 'light' ? 'bg-white border-slate-200' : 'bg-[rgba(17,24,50,0.6)] border-[rgba(56,78,135,0.2)]';
+  const textColor = theme === 'light' ? 'text-slate-900' : 'text-white';
+  const mutedColor = theme === 'light' ? 'text-slate-500' : 'text-gray-500';
+  const subTextColor = theme === 'light' ? 'text-slate-600' : 'text-gray-400';
 
   return (
     <div className="flex gap-6 mt-2 flex-1 min-h-0">
@@ -129,26 +136,26 @@ export default function MyLearningView() {
           </div>
           <div className="grid grid-cols-4 gap-3">
             {continueLearningCards.map((card, i) => (
-              <div key={i} className="bg-[rgba(17,24,50,0.6)] border border-[rgba(56,78,135,0.2)] hover:border-cyan-500/30 rounded-xl p-3.5 transition-all flex flex-col justify-between">
+              <div key={i} className={`border hover:border-cyan-500/30 rounded-xl p-3.5 transition-all flex flex-col justify-between ${cardBg}`}>
                 <div>
                   <div className="flex items-center gap-2 mb-2">
                     <span className={`w-7 h-7 rounded-lg border flex items-center justify-center text-sm font-semibold ${card.iconColor}`}>
                       {card.icon}
                     </span>
                     <div>
-                      <p className="text-gray-400 text-[10px] uppercase font-bold tracking-wider leading-tight">{card.subject}</p>
-                      <p className="text-white text-xs font-bold leading-tight line-clamp-1">{card.topic}</p>
+                      <p className={`${mutedColor} text-[10px] uppercase font-bold tracking-wider leading-tight`}>{card.subject}</p>
+                      <p className={`text-xs font-bold leading-tight line-clamp-1 ${textColor}`}>{card.topic}</p>
                     </div>
                   </div>
                   <div className="flex items-center justify-between mt-3.5">
-                    <div className="flex-1 h-1.5 rounded-full bg-[rgba(56,78,135,0.2)] overflow-hidden mr-2">
+                    <div className={`flex-1 h-1.5 rounded-full overflow-hidden mr-2 ${theme === 'light' ? 'bg-slate-200' : 'bg-[rgba(56,78,135,0.2)]'}`}>
                       <div className={`h-full rounded-full ${card.barColor}`} style={{ width: `${card.progress}%` }} />
                     </div>
-                    <span className="text-gray-300 text-[10px] font-bold whitespace-nowrap">{card.progress}%</span>
+                    <span className={`${subTextColor} text-[10px] font-bold whitespace-nowrap`}>{card.progress}%</span>
                   </div>
                 </div>
                 <div className="flex items-center justify-between mt-3">
-                  <div className="flex items-center gap-1 text-gray-500 text-[10px]">
+                  <div className={`flex items-center gap-1 text-[10px] ${mutedColor}`}>
                     <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                       <circle cx="12" cy="12" r="10" />
                       <polyline points="12,6 12,12 16,14" />
@@ -188,33 +195,33 @@ export default function MyLearningView() {
           {/* Lessons list */}
           <div className="space-y-2.5">
             {lessonsList.map((lesson, i) => (
-              <div key={i} className="flex items-center justify-between p-3 rounded-xl bg-[rgba(17,24,50,0.5)] border border-[rgba(56,78,135,0.15)] hover:border-[rgba(56,78,135,0.3)] transition-all">
+              <div key={i} className={`flex items-center justify-between p-3 rounded-xl border hover:border-cyan-500/30 transition-all ${rowBg}`}>
                 <div className="flex items-center gap-3 flex-1 min-w-0">
                   <div className={`w-9 h-9 rounded-lg border flex items-center justify-center text-base font-semibold flex-shrink-0 ${lesson.iconColor}`}>
                     {lesson.icon}
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="text-white text-sm font-semibold leading-tight">{lesson.topic}</p>
-                    <p className="text-gray-500 text-[11px] leading-tight mt-0.5">{lesson.subject} • {lesson.form}</p>
+                    <p className={`text-sm font-semibold leading-tight ${textColor}`}>{lesson.topic}</p>
+                    <p className={`${mutedColor} text-[11px] leading-tight mt-0.5`}>{lesson.subject} • {lesson.form}</p>
                   </div>
                 </div>
 
                 <div className="flex items-center gap-6">
                   {/* Progress bar */}
                   <div className="flex items-center gap-2 w-44">
-                    <div className="flex-1 h-1.5 rounded-full bg-[rgba(56,78,135,0.2)] overflow-hidden">
+                    <div className={`flex-1 h-1.5 rounded-full overflow-hidden ${theme === 'light' ? 'bg-slate-200' : 'bg-[rgba(56,78,135,0.2)]'}`}>
                       <div className={`h-full rounded-full ${lesson.barColor}`} style={{ width: `${lesson.progress}%` }} />
                     </div>
-                    <span className="text-gray-300 text-xs font-semibold w-8 text-right">{lesson.progress}%</span>
+                    <span className={`${subTextColor} text-xs font-semibold w-8 text-right`}>{lesson.progress}%</span>
                   </div>
 
                   {/* Continue Button */}
-                  <button className="px-4 py-1.5 rounded-lg bg-[rgba(34,211,238,0.06)] border border-cyan-500/20 text-cyan-400 text-xs font-bold hover:bg-cyan-500/10 transition-colors">
+                  <button className="px-4 py-1.5 rounded-lg bg-cyan-500/10 border border-cyan-500/20 text-cyan-600 text-xs font-bold hover:bg-cyan-500/20 transition-colors">
                     Continue
                   </button>
 
                   {/* Bookmark Button */}
-                  <button className="text-gray-500 hover:text-cyan-400 transition-colors">
+                  <button className={`${mutedColor} hover:text-cyan-500 transition-colors`}>
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                       <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
                     </svg>
@@ -224,7 +231,7 @@ export default function MyLearningView() {
             ))}
           </div>
 
-          <button className="w-full text-center text-gray-400 hover:text-white text-xs font-semibold mt-4 py-1.5 transition-colors">
+          <button className={`w-full text-center text-xs font-semibold mt-4 py-1.5 transition-colors ${mutedColor} hover:text-cyan-500`}>
             View All My Learning
           </button>
         </div>

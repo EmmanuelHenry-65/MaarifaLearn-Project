@@ -1,3 +1,5 @@
+import { useTheme } from '../context/ThemeContext';
+
 const weekDays = [
   { day: 'Mon', date: '26 May', tasks: '3/4 tasks', done: true, today: false },
   { day: 'Tue', date: '27 May', tasks: '4/5 tasks', done: true, today: false },
@@ -116,6 +118,11 @@ function StatusBadge({ status }: { status: string }) {
 }
 
 export default function StudyPlannerView() {
+  const { theme } = useTheme();
+  const rowBg = theme === 'light' ? 'bg-white border-slate-200' : 'bg-[rgba(17,24,50,0.5)] border-[rgba(56,78,135,0.15)]';
+  const textColor = theme === 'light' ? 'text-slate-900' : 'text-white';
+  const mutedColor = theme === 'light' ? 'text-slate-500' : 'text-gray-500';
+
   return (
     <div className="flex gap-6 mt-2 flex-1 min-h-0">
       {/* Left/Center Column */}
@@ -125,8 +132,8 @@ export default function StudyPlannerView() {
         <div className="glass-card p-5">
           <div className="flex items-center justify-between mb-5">
             <div>
-              <h3 className="text-white font-bold text-lg leading-tight">Weekly Overview</h3>
-              <p className="text-gray-500 text-xs mt-1">26 May – 01 June 2025</p>
+              <h3 className={`font-bold text-lg leading-tight ${textColor}`}>Weekly Overview</h3>
+              <p className={`${mutedColor} text-xs mt-1`}>26 May – 01 June 2025</p>
             </div>
             <button className="flex items-center gap-2 px-3.5 py-2 rounded-lg bg-cyan-500/10 border border-cyan-500/25 text-cyan-400 text-xs font-bold hover:bg-cyan-500/20 transition-colors">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -146,7 +153,9 @@ export default function StudyPlannerView() {
                 key={i}
                 className={`flex flex-col items-center py-3.5 px-1 rounded-xl transition-all ${
                   wd.today
-                    ? 'bg-[rgba(30,42,90,0.55)] border border-cyan-500/30 shadow-lg shadow-cyan-500/5'
+                    ? theme === 'light' 
+                      ? 'bg-cyan-50 border border-cyan-200 shadow-sm'
+                      : 'bg-[rgba(30,42,90,0.55)] border border-cyan-500/30 shadow-lg shadow-cyan-500/5'
                     : 'bg-transparent'
                 }`}
               >
@@ -208,15 +217,15 @@ export default function StudyPlannerView() {
 
           <div className="space-y-2.5">
             {todaysPlan.map((task, i) => (
-              <div key={i} className="flex items-center justify-between p-3 rounded-xl bg-[rgba(17,24,50,0.5)] border border-[rgba(56,78,135,0.15)] hover:border-[rgba(56,78,135,0.3)] transition-all">
+              <div key={i} className={`flex items-center justify-between p-3 rounded-xl border hover:border-cyan-500/30 transition-all ${rowBg}`}>
                 <div className="flex items-center gap-3 flex-1 min-w-0">
                   <div className={`w-10 h-10 rounded-xl border flex items-center justify-center text-base flex-shrink-0 ${task.iconBg}`}>
                     {task.icon}
                   </div>
                   <div className="min-w-0">
-                    <p className="text-gray-400 text-[10px] font-bold uppercase tracking-wide leading-tight">{task.subject}</p>
-                    <p className="text-white text-sm font-semibold leading-tight mt-0.5">{task.topic}</p>
-                    <p className="text-gray-500 text-[10px] mt-0.5 flex items-center gap-1">
+                    <p className={`${mutedColor} text-[10px] font-bold uppercase tracking-wide leading-tight`}>{task.subject}</p>
+                    <p className={`text-sm font-semibold leading-tight mt-0.5 ${textColor}`}>{task.topic}</p>
+                    <p className={`${mutedColor} text-[10px] mt-0.5 flex items-center gap-1`}>
                       <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                         <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
                         <polyline points="14,2 14,8 20,8" />
@@ -226,12 +235,12 @@ export default function StudyPlannerView() {
                   </div>
                 </div>
                 <div className="flex items-center gap-4 flex-shrink-0 ml-4">
-                  <span className="px-3 py-1.5 rounded-lg bg-[rgba(17,24,50,0.7)] border border-[rgba(56,78,135,0.25)] text-gray-300 text-xs font-semibold whitespace-nowrap">
+                  <span className={`px-3 py-1.5 rounded-lg border text-xs font-semibold whitespace-nowrap ${theme === 'light' ? 'bg-slate-100 border-slate-200 text-slate-700' : 'bg-[rgba(17,24,50,0.7)] border-[rgba(56,78,135,0.25)] text-gray-300'}`}>
                     {task.time}
                   </span>
-                  <span className="w-px h-6 bg-[rgba(56,78,135,0.25)]" />
+                  <span className={`w-px h-6 ${theme === 'light' ? 'bg-slate-200' : 'bg-[rgba(56,78,135,0.25)]'}`} />
                   <StatusBadge status={task.status} />
-                  <button className="text-gray-500 hover:text-gray-300 transition-colors">
+                  <button className={`${mutedColor} hover:text-slate-700 transition-colors`}>
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
                       <circle cx="12" cy="5" r="1.6" />
                       <circle cx="12" cy="12" r="1.6" />

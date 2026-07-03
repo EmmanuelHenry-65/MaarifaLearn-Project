@@ -1,28 +1,29 @@
 import { useTheme } from '../context/ThemeContext';
 
 const suggestions = [
-  'Explain photosynthesis like I\'m 14',
+  'Explain mitosis like I\'m 14',
   'Compare photosynthesis in Kenya and South Africa',
   'Generate 5 quiz questions on Cell Division',
 ];
 
 export default function AITutor() {
   const { theme } = useTheme();
-  const primaryText = theme === 'light' ? 'text-slate-900' : 'text-white';
-  const bodyText = theme === 'light' ? 'text-slate-600' : 'text-gray-400';
-  const chipText = theme === 'light' ? 'text-slate-600 hover:text-slate-800' : 'text-gray-400 hover:text-gray-300';
-  const inputBg = theme === 'light' ? 'bg-slate-100 border-slate-200 text-slate-700 placeholder-slate-400' : 'bg-[rgba(17,24,50,0.8)] border-[rgba(56,78,135,0.3)] text-gray-300 placeholder-gray-600';
-  const suggestionBg = theme === 'light' ? 'bg-white border-slate-200 hover:border-cyan-400/40' : 'bg-[rgba(17,24,50,0.5)] border-[rgba(56,78,135,0.2)] hover:border-cyan-500/30';
+  const titleColor = theme === 'light' ? 'text-slate-900' : 'text-white';
+  const textColor = theme === 'light' ? 'text-slate-600' : 'text-gray-400';
+  const mutedColor = theme === 'light' ? 'text-slate-500' : 'text-gray-500';
+  const inputBg = theme === 'light' ? 'bg-slate-100 border-slate-300 text-slate-900 placeholder-slate-400' : 'bg-[rgba(17,24,50,0.8)] border-[rgba(56,78,135,0.3)] text-gray-300 placeholder-gray-600';
+  const suggestionBg = theme === 'light' ? 'bg-slate-50 border-slate-200 text-slate-700 hover:border-cyan-400 hover:text-slate-900' : 'bg-[rgba(17,24,50,0.5)] border-[rgba(56,78,135,0.2)] text-gray-400 hover:border-cyan-500/30 hover:text-gray-300';
 
   return (
     <div className="glass-card p-5 relative overflow-hidden">
+      {/* Sparkles */}
       <div className="absolute top-3 right-3 text-cyan-400 text-[10px] animate-pulse">✦</div>
       <div className="absolute top-8 right-8 text-cyan-300 text-[6px] animate-pulse" style={{ animationDelay: '0.5s' }}>✦</div>
       
       <div className="flex items-start justify-between mb-3">
         <div>
-          <h3 className={`font-bold text-base ${primaryText}`}>Ask your AI Tutor</h3>
-          <p className={`text-xs mt-1 leading-relaxed ${bodyText}`}>
+          <h3 className={`font-bold text-base ${titleColor}`}>Ask your AI Tutor</h3>
+          <p className={`text-xs mt-1 leading-relaxed ${textColor}`}>
             I'm here to help you understand any topic!
           </p>
         </div>
@@ -35,6 +36,7 @@ export default function AITutor() {
         </div>
       </div>
 
+      {/* Chat Input */}
       <div className="flex items-center gap-2 mb-4 mt-2">
         <div className="flex-1 relative">
           <input
@@ -50,13 +52,14 @@ export default function AITutor() {
         </button>
       </div>
 
+      {/* Suggestions */}
       <div>
-        <p className={`text-xs font-medium mb-2 ${theme === 'light' ? 'text-slate-500' : 'text-gray-500'}`}>Try these</p>
+        <p className={`text-xs font-medium mb-2 ${mutedColor}`}>Try these</p>
         <div className="space-y-2">
           {suggestions.map((s, i) => (
             <button
               key={i}
-              className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl border text-xs transition-all text-left ${suggestionBg} ${chipText}`}
+              className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl border text-xs transition-all text-left ${suggestionBg}`}
             >
               <span className="leading-relaxed">{s}</span>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-cyan-500 flex-shrink-0 ml-2">
