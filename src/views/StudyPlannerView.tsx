@@ -10,22 +10,22 @@ const weekDays = [
 
 const todaysPlan = [
   {
-    subject: 'Biology',
-    topic: 'Nutrition in Plants',
-    type: 'Lesson',
-    time: '9:00 AM - 10:00 AM',
-    status: 'Completed',
-    icon: '🌿',
-    iconBg: 'bg-emerald-500/15 border-emerald-500/30 text-emerald-400',
-  },
-  {
     subject: 'Mathematics',
     topic: 'Quadratic Equations',
     type: 'Practice',
-    time: '10:30 AM - 11:30 AM',
+    time: '9:00 AM - 10:00 AM',
     status: 'Completed',
     icon: '⨍',
     iconBg: 'bg-blue-500/15 border-blue-500/30 text-blue-400',
+  },
+  {
+    subject: 'English',
+    topic: 'Essay Writing',
+    type: 'Lesson',
+    time: '10:30 AM - 11:30 AM',
+    status: 'Completed',
+    icon: '📖',
+    iconBg: 'bg-purple-500/15 border-purple-500/30 text-purple-400',
   },
   {
     subject: 'Chemistry',
@@ -37,22 +37,22 @@ const todaysPlan = [
     iconBg: 'bg-orange-500/15 border-orange-500/30 text-orange-400',
   },
   {
-    subject: 'English',
-    topic: 'Narrative Writing',
+    subject: 'ICT',
+    topic: 'Networking Basics',
     type: 'Task',
     time: '2:00 PM - 3:00 PM',
     status: 'Upcoming',
-    icon: '📖',
-    iconBg: 'bg-blue-500/15 border-blue-500/30 text-blue-400',
+    icon: '💻',
+    iconBg: 'bg-cyan-500/15 border-cyan-500/30 text-cyan-400',
   },
   {
-    subject: 'Past Papers',
-    topic: 'Biology Paper 1 (2024)',
-    type: 'Past Paper',
+    subject: 'Computer Science',
+    topic: 'Python Functions',
+    type: 'Lesson',
     time: '4:00 PM - 5:00 PM',
     status: 'Upcoming',
-    icon: '🎯',
-    iconBg: 'bg-pink-500/15 border-pink-500/30 text-pink-400',
+    icon: '🖥️',
+    iconBg: 'bg-cyan-500/15 border-cyan-500/30 text-cyan-400',
   },
   {
     subject: 'Revision',
@@ -72,9 +72,9 @@ const studyGoals = [
 ];
 
 const deadlines = [
-  { date: '02', month: 'JUN', title: 'Mathematics Assignment', due: 'Due in 4 days', bg: 'bg-gradient-to-br from-orange-500 to-amber-600' },
-  { date: '05', month: 'JUN', title: 'Biology Practical Report', due: 'Due in 7 days', bg: 'bg-gradient-to-br from-amber-600 to-yellow-700' },
-  { date: '07', month: 'JUN', title: 'English Essay', due: 'Due in 9 days', bg: 'bg-gradient-to-br from-blue-500 to-indigo-600' },
+  { date: '02', month: 'JUN', title: 'Mathematics Assignment', due: 'Due in 4 days', bg: 'bg-gradient-to-br from-blue-500 to-indigo-600' },
+  { date: '05', month: 'JUN', title: 'Chemistry Lab Report', due: 'Due in 7 days', bg: 'bg-gradient-to-br from-orange-500 to-amber-600' },
+  { date: '07', month: 'JUN', title: 'English Essay', due: 'Due in 9 days', bg: 'bg-gradient-to-br from-purple-500 to-indigo-600' },
 ];
 
 const streakDays = [

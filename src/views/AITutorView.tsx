@@ -1,8 +1,8 @@
 import { useState } from 'react';
-
+// Try asking chips (general, subject-agnostic)
 const tryAsking = [
-  'Explain photosynthesis',
-  'Solve this equation',
+  'Explain a concept',
+  'Solve this problem',
   'Summarize this topic',
   'Generate quiz',
   'Create flashcards',
@@ -74,36 +74,36 @@ const quickActions = [
 
 const recentConversations = [
   {
-    question: 'Explain the process of photosyntisis in plants.',
-    answer: 'Photosynthesis is the process used by green plants to make their own food...',
+    question: 'Explain quadratic equations step by step.',
+    answer: 'A quadratic equation is a polynomial of degree 2. We can solve it using factoring...',
     time: 'Today, 10:24 AM',
-    tag: 'Biology',
-    tagColor: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/25',
+    tag: 'Mathematics',
+    tagColor: 'bg-blue-500/15 text-blue-400 border-blue-500/25',
     iconColor: 'bg-cyan-500/15 border-cyan-500/25 text-cyan-400',
   },
   {
-    question: 'Solve: 2x² + 5x − 3 = 0 using factorization method.',
-    answer: 'To solve 2x² + 5x − 3 = 0, we factorize the quadratic equation...',
+    question: 'Help me understand chemical bonding.',
+    answer: 'Chemical bonding is the process by which atoms combine to form molecules...',
     time: 'Yesterday, 4:15 PM',
-    tag: 'Mathematics',
-    tagColor: 'bg-blue-500/15 text-blue-400 border-blue-500/25',
+    tag: 'Chemistry',
+    tagColor: 'bg-orange-500/15 text-orange-400 border-orange-500/25',
     iconColor: 'bg-purple-500/15 border-purple-500/25 text-purple-400',
   },
   {
-    question: 'Give me a summary of the Kenyan independence.',
-    answer: 'Kenya gained independence on December 12, 1963 after years of struggle...',
+    question: 'Help me revise Kiswahili grammar.',
+    answer: 'Sarufi ya Kiswahili inajumuisha nomino, vitenzi, vivumishi na viwakilishi...',
     time: 'Yesterday, 1:02 PM',
-    tag: 'History',
-    tagColor: 'bg-cyan-500/15 text-cyan-400 border-cyan-500/25',
+    tag: 'Kiswahili',
+    tagColor: 'bg-teal-500/15 text-teal-400 border-teal-500/25',
     iconColor: 'bg-cyan-500/15 border-cyan-500/25 text-cyan-400',
   },
   {
-    question: 'What are the main types of chemical bonds?',
-    answer: 'The main types of chemical bonds are ionic, covalent and metallic bonds...',
+    question: 'Explain Python functions and loops.',
+    answer: 'Functions in Python are reusable blocks of code defined with the def keyword...',
     time: 'May 30, 2026',
-    tag: 'Chemistry',
-    tagColor: 'bg-orange-500/15 text-orange-400 border-orange-500/25',
-    iconColor: 'bg-orange-500/15 border-orange-500/25 text-orange-400',
+    tag: 'Computer Science',
+    tagColor: 'bg-cyan-500/15 text-cyan-400 border-cyan-500/25',
+    iconColor: 'bg-cyan-500/15 border-cyan-500/25 text-cyan-400',
   },
 ];
 
@@ -116,8 +116,8 @@ const insights = [
   },
   {
     icon: '🎯',
-    iconBg: 'bg-purple-500/15 border-purple-500/25',
-    bold: 'Your top subject today is Biology.',
+    iconBg: 'bg-blue-500/15 border-blue-500/25',
+    bold: 'Your top subject today is Mathematics.',
     rest: 'You spent 42% of your study time here.',
   },
   {
@@ -128,11 +128,13 @@ const insights = [
   },
 ];
 
+// Pull a popular prompt from each subject (centralized data source)
 const popularQuestions = [
-  'Explain mitosis in simple terms',
-  'What is the difference between plant and animal cells?',
-  'How do I solve simultaneous equations?',
-  'Write a short essay about climate change',
+  'Explain quadratic equations step by step',
+  'Help me understand chemical bonding',
+  'Quiz me on Newton\'s Laws of Motion',
+  'Explain Python functions and loops',
+  'Help me revise Kiswahili grammar',
 ];
 
 export default function AITutorView() {

@@ -1,12 +1,19 @@
-const nodes = [
-  { name: 'Cell Structure', completed: true },
-  { name: 'Levels of\nOrganization', completed: true },
-  { name: 'Photosynthesis', current: true, completed: true },
-  { name: 'Respiration', locked: true },
-  { name: 'Genetics', locked: true },
-];
+import { learningJourney, getSubject } from '../data/subjects';
 
 export default function LearningJourney() {
+  // Build display data with subject color on each node
+  const nodes = learningJourney.map((n, i) => {
+    const sub = getSubject(n.subjectId);
+    return {
+      name: n.topic,
+      completed: n.completed,
+      current: n.current,
+      locked: n.locked,
+      subject: sub,
+      index: i,
+    };
+  });
+
   return (
     <div className="glass-card p-5 h-full flex flex-col">
       <div className="flex items-center justify-between mb-5">
@@ -15,11 +22,9 @@ export default function LearningJourney() {
       </div>
       <div className="flex-1 flex items-center">
         <div className="flex items-start justify-between w-full relative">
-          {/* Connector line background */}
           <div className="absolute top-5 left-[10%] right-[10%] h-[2px] bg-[rgba(56,78,135,0.3)]" />
-          {/* Completed portion of connector */}
           <div className="absolute top-5 left-[10%] h-[2px] bg-gradient-to-r from-green-500 to-cyan-500" style={{ width: '50%' }} />
-          
+
           {nodes.map((node, i) => (
             <div key={i} className="flex flex-col items-center relative z-10" style={{ width: '20%' }}>
               <div
@@ -37,9 +42,7 @@ export default function LearningJourney() {
                     <path d="M7 11V7a5 5 0 0110 0v4" />
                   </svg>
                 ) : (
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                    <polyline points="20,6 9,17 4,12" />
-                  </svg>
+                  <span className="text-sm">{node.subject.icon}</span>
                 )}
               </div>
               <span className={`text-[10px] mt-2.5 text-center leading-tight font-medium whitespace-pre-line ${

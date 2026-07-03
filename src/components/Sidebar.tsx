@@ -1,20 +1,20 @@
 import React from 'react';
+import { NavLink } from 'react-router-dom';
 
 interface SidebarProps {
   activeTab: string;
-  setActiveTab: (tab: string) => void;
 }
 
 const menuItems = [
-  { icon: 'home', label: 'Dashboard' },
-  { icon: 'learning', label: 'My Learning' },
-  { icon: 'subjects', label: 'Subjects' },
-  { icon: 'ai', label: 'AI Tutor' },
-  { icon: 'planner', label: 'Study Planner' },
-  { icon: 'papers', label: 'Past Papers' },
-  { icon: 'resources', label: 'Resources' },
-  { icon: 'achievements', label: 'Accomplishments' },
-  { icon: 'settings', label: 'Settings' },
+  { icon: 'home', label: 'Dashboard', path: '/' },
+  { icon: 'learning', label: 'My Learning', path: '/my-learning' },
+  { icon: 'subjects', label: 'Subjects', path: '/subjects' },
+  { icon: 'ai', label: 'AI Tutor', path: '/ai-tutor' },
+  { icon: 'planner', label: 'Study Planner', path: '/study-planner' },
+  { icon: 'papers', label: 'Past Papers', path: '/past-papers' },
+  { icon: 'resources', label: 'Resources', path: '/resources' },
+  { icon: 'achievements', label: 'Accomplishments', path: '/accomplishments' },
+  { icon: 'settings', label: 'Settings', path: '/settings' },
 ];
 
 const icons: Record<string, React.JSX.Element> = {
@@ -79,7 +79,7 @@ const icons: Record<string, React.JSX.Element> = {
   ),
 };
 
-export default function Sidebar({ activeTab, setActiveTab }: SidebarProps) {
+export default function Sidebar(_: SidebarProps) {
   return (
     <aside className="fixed left-0 top-0 bottom-0 w-[200px] flex flex-col bg-gradient-to-b from-[#0d1225] to-[#0a0e1a] border-r border-[rgba(56,78,135,0.2)] z-50">
       {/* Logo */}
@@ -99,20 +99,27 @@ export default function Sidebar({ activeTab, setActiveTab }: SidebarProps) {
       {/* Nav Items */}
       <nav className="flex-1 px-2 space-y-0.5 overflow-y-auto min-h-0">
         {menuItems.map((item) => (
-          <button
+          <NavLink
             key={item.label}
-            onClick={() => setActiveTab(item.label)}
-            className={`sidebar-item w-full flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] font-medium transition-all ${
-              activeTab === item.label
-                ? 'active text-cyan-400 bg-cyan-400/10 border-l-[3px] border-cyan-400 font-bold'
-                : 'text-gray-400 hover:text-gray-200 border-l-[3px] border-transparent'
-            }`}
+            to={item.path}
+            end={item.path === '/'}
+            className={({ isActive }) =>
+              `sidebar-item w-full flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] font-medium transition-all ${
+                isActive
+                  ? 'active text-cyan-400 bg-cyan-400/10 border-l-[3px] border-cyan-400 font-bold'
+                  : 'text-gray-400 hover:text-gray-200 border-l-[3px] border-transparent'
+              }`
+            }
           >
-            <span className={activeTab === item.label ? 'text-cyan-400' : 'text-gray-500'}>
-              {icons[item.icon]}
-            </span>
-            {item.label}
-          </button>
+            {({ isActive }) => (
+              <>
+                <span className={isActive ? 'text-cyan-400' : 'text-gray-500'}>
+                  {icons[item.icon]}
+                </span>
+                {item.label}
+              </>
+            )}
+          </NavLink>
         ))}
       </nav>
 
