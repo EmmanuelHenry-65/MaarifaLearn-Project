@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 
 const stats = [
   { label: 'Papers Attempted', value: '24', sub: 'Keep practicing!', icon: '📄', color: 'text-purple-400', bg: 'bg-purple-500/10 border-purple-500/20' },
@@ -78,6 +79,16 @@ export default function PastPapersView() {
               </div>
             </div>
           ))}
+        </div>
+
+        <div className="glass-card p-4 flex items-center justify-between">
+          <div>
+            <h3 className="text-white font-bold text-base">Assessment & Examination Center</h3>
+            <p className="text-gray-500 text-xs mt-1">Open authentic exams, timed mocks, AI walkthroughs, analytics, and smart review.</p>
+          </div>
+          <Link to="/exams" className="px-4 py-2 rounded-lg bg-cyan-500 text-white text-xs font-bold hover:bg-cyan-600 transition-colors">
+            Open Exam Center
+          </Link>
         </div>
 
         {/* Explore by Subject */}

@@ -12,6 +12,7 @@ import ResourcesPage from './pages/ResourcesPage';
 import AccomplishmentsPage from './pages/AccomplishmentsPage';
 import SettingsPage from './pages/SettingsPage';
 import WorkspacePage from './pages/WorkspacePage';
+import ExamsPage from './pages/ExamsPage';
 
 export default function App() {
   return (
@@ -26,6 +27,7 @@ export default function App() {
             <Route path="/ai-tutor" element={<AITutorPage />} />
             <Route path="/study-planner" element={<StudyPlannerPage />} />
             <Route path="/past-papers" element={<PastPapersPage />} />
+            <Route path="/exams" element={<ExamsPage />} />
             <Route path="/resources" element={<ResourcesPage />} />
             <Route path="/accomplishments" element={<AccomplishmentsPage />} />
             <Route path="/settings" element={<SettingsPage />} />
