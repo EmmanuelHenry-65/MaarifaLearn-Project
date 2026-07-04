@@ -13,6 +13,7 @@ const routeToTitle: Record<string, { title: string; subtitle: string }> = {
   '/settings': { title: 'Settings', subtitle: 'Manage your account, preferences, and learning experience.' },
   '/accomplishments': { title: 'Accomplishments', subtitle: 'Celebrate your wins and track your learning journey.' },
   '/resources': { title: 'Resources', subtitle: 'Discover high-quality learning materials aligned to the CBC curriculum.' },
+  '/workspace': { title: 'Learning Workspace', subtitle: 'Study deeply with subject tools, practice, notes, and AI support.' },
 };
 
 const pathToLabel: Record<string, string> = {
@@ -25,6 +26,7 @@ const pathToLabel: Record<string, string> = {
   '/settings': 'Settings',
   '/accomplishments': 'Accomplishments',
   '/resources': 'Resources',
+  '/workspace': 'My Learning',
 };
 
 export default function AppLayout() {
@@ -33,7 +35,8 @@ export default function AppLayout() {
 
   // For subject detail pages like /subjects/mathematics, treat as Subjects
   const isSubjectDetail = location.pathname.startsWith('/subjects/');
-  const key = isSubjectDetail ? '/subjects' : location.pathname;
+  const isWorkspace = location.pathname.startsWith('/workspace');
+  const key = isSubjectDetail ? '/subjects' : isWorkspace ? '/workspace' : location.pathname;
   const meta = routeToTitle[key] || routeToTitle['/'];
 
   const activeTab = pathToLabel[key] || 'Dashboard';

@@ -38,6 +38,9 @@ export default function SubjectDetailPage() {
             <h2 className="text-white font-extrabold text-2xl capitalize">{data.name}</h2>
             <p className="text-gray-400 text-sm mt-1">{data.description}</p>
           </div>
+          <Link to="/workspace" className="px-4 py-2 rounded-lg bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 text-sm font-bold hover:bg-cyan-500/20">
+            Open Workspace
+          </Link>
           <Link to="/ai-tutor" className="px-4 py-2 rounded-lg bg-purple-500/10 border border-purple-500/30 text-purple-400 text-sm font-bold hover:bg-purple-500/20">
             Ask AI Tutor
           </Link>

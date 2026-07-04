@@ -68,9 +68,9 @@ const todaysPlan = [
 ];
 
 const studyGoals = [
-  { goal: 'Complete 25 tasks', progress: 48, label: '12 / 25', icon: '✅', iconColor: 'text-green-400' },
-  { goal: 'Study 15 hours', progress: 50, label: '7.5 / 15 hrs', icon: '⏱️', iconColor: 'text-purple-400' },
-  { goal: 'Attempt 3 past papers', progress: 33, label: '1 / 3', icon: '📄', iconColor: 'text-blue-400' },
+  { goal: 'Complete 25 tasks', progress: 48, label: '12 / 25', icon: '✅', iconColor: 'text-green-500' },
+  { goal: 'Study 15 hours', progress: 50, label: '7.5 / 15 hrs', icon: '⏱️', iconColor: 'text-purple-500' },
+  { goal: 'Attempt 3 past papers', progress: 33, label: '1 / 3', icon: '📄', iconColor: 'text-blue-500' },
 ];
 
 const deadlines = [
@@ -79,7 +79,7 @@ const deadlines = [
   { date: '07', month: 'JUN', title: 'English Essay', due: 'Due in 9 days', bg: 'bg-gradient-to-br from-blue-500 to-indigo-600' },
 ];
 
-const streakDays = [
+const streakDaysList = [
   { day: 'M', done: true },
   { day: 'T', done: true },
   { day: 'W', done: true },
@@ -92,7 +92,7 @@ const streakDays = [
 function StatusBadge({ status }: { status: string }) {
   if (status === 'Completed') {
     return (
-      <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-green-500/10 border border-green-500/25 text-green-400 text-xs font-bold whitespace-nowrap">
+      <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-green-500/10 border border-green-500/25 text-green-600 text-xs font-bold whitespace-nowrap">
         Completed
         <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
           <polyline points="20,6 9,17 4,12" />
@@ -102,7 +102,7 @@ function StatusBadge({ status }: { status: string }) {
   }
   if (status === 'In Progress') {
     return (
-      <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-cyan-500/10 border border-cyan-500/25 text-cyan-400 text-xs font-bold whitespace-nowrap">
+      <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-cyan-500/10 border border-cyan-500/25 text-cyan-600 text-xs font-bold whitespace-nowrap">
         In Progress
         <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
           <circle cx="12" cy="12" r="9" />
@@ -111,7 +111,7 @@ function StatusBadge({ status }: { status: string }) {
     );
   }
   return (
-    <span className="px-3 py-1.5 rounded-lg bg-indigo-500/10 border border-indigo-500/25 text-indigo-400 text-xs font-bold whitespace-nowrap">
+    <span className="px-3 py-1.5 rounded-lg bg-indigo-500/10 border border-indigo-500/25 text-indigo-600 text-xs font-bold whitespace-nowrap">
       Upcoming
     </span>
   );
@@ -119,9 +119,10 @@ function StatusBadge({ status }: { status: string }) {
 
 export default function StudyPlannerView() {
   const { theme } = useTheme();
-  const rowBg = theme === 'light' ? 'bg-white border-slate-200' : 'bg-[rgba(17,24,50,0.5)] border-[rgba(56,78,135,0.15)]';
   const textColor = theme === 'light' ? 'text-slate-900' : 'text-white';
   const mutedColor = theme === 'light' ? 'text-slate-500' : 'text-gray-500';
+  const itemBg = theme === 'light' ? 'bg-white border-slate-200 shadow-sm' : 'bg-[rgba(17,24,50,0.5)] border-[rgba(56,78,135,0.15)]';
+  const progressBarBg = theme === 'light' ? 'bg-slate-200' : 'bg-[rgba(56,78,135,0.25)]';
 
   return (
     <div className="flex gap-6 mt-2 flex-1 min-h-0">
@@ -135,7 +136,7 @@ export default function StudyPlannerView() {
               <h3 className={`font-bold text-lg leading-tight ${textColor}`}>Weekly Overview</h3>
               <p className={`${mutedColor} text-xs mt-1`}>26 May – 01 June 2025</p>
             </div>
-            <button className="flex items-center gap-2 px-3.5 py-2 rounded-lg bg-cyan-500/10 border border-cyan-500/25 text-cyan-400 text-xs font-bold hover:bg-cyan-500/20 transition-colors">
+            <button className="flex items-center gap-2 px-3.5 py-2 rounded-lg bg-cyan-500/10 border border-cyan-500/25 text-cyan-600 text-xs font-bold hover:bg-cyan-500/20 transition-colors">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <rect x="3" y="4" width="18" height="18" rx="2" />
                 <line x1="16" y1="2" x2="16" y2="6" />
@@ -159,28 +160,28 @@ export default function StudyPlannerView() {
                     : 'bg-transparent'
                 }`}
               >
-                <span className={`text-xs font-bold ${wd.today ? 'text-white' : 'text-gray-300'}`}>{wd.day}</span>
-                <span className="text-gray-500 text-[10px] mt-0.5">{wd.date}</span>
+                <span className={`text-xs font-bold ${wd.today ? (theme === 'light' ? 'text-cyan-700' : 'text-white') : (theme === 'light' ? 'text-slate-600' : 'text-gray-300')}`}>{wd.day}</span>
+                <span className={`${mutedColor} text-[10px] mt-0.5`}>{wd.date}</span>
                 {wd.today && (
                   <>
-                    <span className="text-cyan-400 text-[10px] font-bold mt-1.5">Today</span>
+                    <span className="text-cyan-600 text-[10px] font-bold mt-1.5">Today</span>
                     <span className="w-4 h-px bg-cyan-500/50 mt-1" />
                   </>
                 )}
                 <div className="mt-2.5 mb-1.5">
                   {wd.done ? (
-                    <span className="w-7 h-7 rounded-full border-2 border-green-500 flex items-center justify-center text-green-400">
+                    <span className="w-7 h-7 rounded-full border-2 border-green-500 flex items-center justify-center text-green-600">
                       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
                         <polyline points="20,6 9,17 4,12" />
                       </svg>
                     </span>
                   ) : !wd.today ? (
-                    <span className="w-7 h-7 rounded-full border-2 border-[rgba(56,78,135,0.4)] block" />
+                    <span className={`w-7 h-7 rounded-full border-2 block ${theme === 'light' ? 'border-slate-200' : 'border-[rgba(56,78,135,0.4)]'}`} />
                   ) : (
                     <span className="h-7 block" />
                   )}
                 </div>
-                <span className={`text-[10px] font-semibold ${wd.today ? 'text-gray-200' : 'text-gray-500'}`}>{wd.tasks}</span>
+                <span className={`text-[10px] font-semibold ${wd.today ? (theme === 'light' ? 'text-cyan-700' : 'text-gray-200') : mutedColor}`}>{wd.tasks}</span>
               </div>
             ))}
           </div>
@@ -188,12 +189,12 @@ export default function StudyPlannerView() {
           {/* Weekly Progress */}
           <div className="mt-5 pt-4 border-t border-[rgba(56,78,135,0.15)]">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-white text-sm font-bold">Weekly Progress</span>
-              <span className="text-gray-400 text-xs">
-                12 / 29 tasks completed <span className="text-cyan-400 font-bold ml-1">41%</span>
+              <span className={`text-sm font-bold ${textColor}`}>Weekly Progress</span>
+              <span className={`${mutedColor} text-xs`}>
+                12 / 29 tasks completed <span className="text-cyan-600 font-bold ml-1">41%</span>
               </span>
             </div>
-            <div className="h-1.5 rounded-full bg-[rgba(56,78,135,0.25)] overflow-hidden">
+            <div className={`h-1.5 rounded-full overflow-hidden ${progressBarBg}`}>
               <div className="h-full rounded-full bg-gradient-to-r from-blue-500 to-cyan-400" style={{ width: '41%' }} />
             </div>
           </div>
@@ -203,10 +204,10 @@ export default function StudyPlannerView() {
         <div className="glass-card p-5">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-baseline gap-3">
-              <h3 className="text-white font-bold text-lg">Today's Plan</h3>
-              <span className="text-gray-500 text-xs">Thursday, 29 May 2025</span>
+              <h3 className={`font-bold text-lg ${textColor}`}>Today's Plan</h3>
+              <span className={`${mutedColor} text-xs`}>Thursday, 29 May 2025</span>
             </div>
-            <button className="flex items-center gap-2 px-3.5 py-2 rounded-lg bg-[rgba(37,99,235,0.15)] border border-blue-500/30 text-blue-400 text-xs font-bold hover:bg-blue-500/20 transition-colors">
+            <button className="flex items-center gap-2 px-3.5 py-2 rounded-lg bg-blue-500/10 border border-blue-500/30 text-blue-600 text-xs font-bold hover:bg-blue-500/20 transition-colors">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                 <line x1="12" y1="5" x2="12" y2="19" />
                 <line x1="5" y1="12" x2="19" y2="12" />
@@ -217,7 +218,7 @@ export default function StudyPlannerView() {
 
           <div className="space-y-2.5">
             {todaysPlan.map((task, i) => (
-              <div key={i} className={`flex items-center justify-between p-3 rounded-xl border hover:border-cyan-500/30 transition-all ${rowBg}`}>
+              <div key={i} className={`flex items-center justify-between p-3 rounded-xl border hover:border-cyan-500/30 transition-all ${itemBg}`}>
                 <div className="flex items-center gap-3 flex-1 min-w-0">
                   <div className={`w-10 h-10 rounded-xl border flex items-center justify-center text-base flex-shrink-0 ${task.iconBg}`}>
                     {task.icon}
@@ -235,12 +236,12 @@ export default function StudyPlannerView() {
                   </div>
                 </div>
                 <div className="flex items-center gap-4 flex-shrink-0 ml-4">
-                  <span className={`px-3 py-1.5 rounded-lg border text-xs font-semibold whitespace-nowrap ${theme === 'light' ? 'bg-slate-100 border-slate-200 text-slate-700' : 'bg-[rgba(17,24,50,0.7)] border-[rgba(56,78,135,0.25)] text-gray-300'}`}>
+                  <span className={`px-3 py-1.5 rounded-lg border text-xs font-semibold whitespace-nowrap ${theme === 'light' ? 'bg-slate-50 border-slate-200 text-slate-700' : 'bg-[rgba(17,24,50,0.7)] border-[rgba(56,78,135,0.25)] text-gray-300'}`}>
                     {task.time}
                   </span>
                   <span className={`w-px h-6 ${theme === 'light' ? 'bg-slate-200' : 'bg-[rgba(56,78,135,0.25)]'}`} />
                   <StatusBadge status={task.status} />
-                  <button className={`${mutedColor} hover:text-slate-700 transition-colors`}>
+                  <button className={`${mutedColor} hover:text-slate-800 transition-colors`}>
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
                       <circle cx="12" cy="5" r="1.6" />
                       <circle cx="12" cy="12" r="1.6" />
@@ -252,7 +253,7 @@ export default function StudyPlannerView() {
             ))}
           </div>
 
-          <button className="w-full flex items-center justify-center gap-1.5 text-cyan-400 hover:text-cyan-300 text-xs font-bold mt-4 py-1.5 transition-colors">
+          <button className="w-full flex items-center justify-center gap-1.5 text-cyan-600 hover:text-cyan-700 text-xs font-bold mt-4 py-1.5 transition-colors">
             View Full Schedule
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
               <polyline points="6,9 12,15 18,9" />
@@ -269,26 +270,26 @@ export default function StudyPlannerView() {
         <div className="glass-card p-5">
           <div className="flex items-center gap-2 mb-4">
             <span className="text-base">🔥</span>
-            <h3 className="text-white font-bold text-base">Study Streak</h3>
+            <h3 className={`font-bold text-base ${textColor}`}>Study Streak</h3>
           </div>
           <div className="flex items-center gap-4 mb-4">
             <div className="text-center">
-              <p className="text-white font-extrabold text-3xl leading-none">7</p>
-              <p className="text-gray-500 text-xs mt-1">Days</p>
+              <p className={`font-extrabold text-3xl leading-none ${textColor}`}>7</p>
+              <p className={`${mutedColor} text-xs mt-1`}>Days</p>
             </div>
             <div className="flex-1">
-              <p className="text-white text-xs font-bold">Keep it up! 🔥</p>
-              <p className="text-gray-500 text-[11px] mt-0.5 leading-relaxed">You're building a great habit.</p>
+              <p className={`text-xs font-bold ${textColor}`}>Keep it up! 🔥</p>
+              <p className={`${mutedColor} text-[11px] mt-0.5 leading-relaxed`}>You're building a great habit.</p>
             </div>
           </div>
           <div className="flex items-center justify-between px-1">
-            {streakDays.map((sd, i) => (
+            {streakDaysList.map((sd, i) => (
               <span
                 key={i}
                 className={`w-7 h-7 rounded-full border-2 flex items-center justify-center text-[10px] font-bold ${
                   sd.done
-                    ? 'border-green-500 text-green-400'
-                    : 'border-[rgba(56,78,135,0.35)] text-gray-600'
+                    ? 'border-green-500 text-green-600'
+                    : (theme === 'light' ? 'border-slate-200 text-slate-300' : 'border-[rgba(56,78,135,0.35)] text-gray-600')
                 }`}
               >
                 {sd.day}
@@ -300,8 +301,8 @@ export default function StudyPlannerView() {
         {/* Study Goals */}
         <div className="glass-card p-5">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-white font-bold text-base">Study Goals</h3>
-            <button className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-[rgba(17,24,50,0.7)] border border-[rgba(56,78,135,0.25)] text-gray-300 text-[11px] font-semibold">
+            <h3 className={`font-bold text-base ${textColor}`}>Study Goals</h3>
+            <button className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-[11px] font-semibold ${theme === 'light' ? 'bg-white border-slate-200 text-slate-700' : 'bg-[rgba(17,24,50,0.7)] border-[rgba(56,78,135,0.25)] text-gray-300'}`}>
               This Week
               <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="text-gray-500">
                 <polyline points="6,9 12,15 18,9" />
@@ -312,13 +313,13 @@ export default function StudyPlannerView() {
             {studyGoals.map((goal, i) => (
               <div key={i}>
                 <div className="flex items-center justify-between mb-1.5">
-                  <span className="flex items-center gap-2 text-white text-xs font-semibold">
+                  <span className={`flex items-center gap-2 text-xs font-semibold ${textColor}`}>
                     <span className={`text-sm ${goal.iconColor}`}>{goal.icon}</span>
                     {goal.goal}
                   </span>
-                  <span className="text-gray-400 text-[11px] font-semibold">{goal.label}</span>
+                  <span className={`${mutedColor} text-[11px] font-semibold`}>{goal.label}</span>
                 </div>
-                <div className="h-1.5 rounded-full bg-[rgba(56,78,135,0.25)] overflow-hidden ml-6">
+                <div className={`h-1.5 rounded-full overflow-hidden ml-6 ${progressBarBg}`}>
                   <div className="h-full rounded-full bg-gradient-to-r from-blue-500 to-cyan-400" style={{ width: `${goal.progress}%` }} />
                 </div>
               </div>
@@ -329,19 +330,19 @@ export default function StudyPlannerView() {
         {/* Upcoming Deadlines */}
         <div className="glass-card p-5">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-white font-bold text-base">Upcoming Deadlines</h3>
-            <button className="text-cyan-400 text-xs font-medium hover:text-cyan-300 transition-colors">View all</button>
+            <h3 className={`font-bold text-base ${textColor}`}>Upcoming Deadlines</h3>
+            <button className="text-cyan-600 text-xs font-medium hover:text-cyan-700 transition-colors">View all</button>
           </div>
           <div className="space-y-2.5">
             {deadlines.map((dl, i) => (
-              <div key={i} className="flex items-center gap-3 p-2.5 rounded-xl bg-[rgba(17,24,50,0.5)] border border-[rgba(56,78,135,0.15)] hover:border-[rgba(56,78,135,0.3)] transition-all">
+              <div key={i} className={`flex items-center gap-3 p-2.5 rounded-xl border hover:border-cyan-500/30 transition-all ${itemBg}`}>
                 <div className={`w-11 h-11 rounded-xl ${dl.bg} flex flex-col items-center justify-center text-white flex-shrink-0 shadow-lg`}>
                   <span className="text-sm font-extrabold leading-none">{dl.date}</span>
                   <span className="text-[8px] font-bold mt-0.5">{dl.month}</span>
                 </div>
                 <div className="min-w-0">
-                  <p className="text-white text-xs font-bold leading-tight">{dl.title}</p>
-                  <p className="text-gray-500 text-[11px] mt-0.5">{dl.due}</p>
+                  <p className={`text-xs font-bold leading-tight ${textColor}`}>{dl.title}</p>
+                  <p className={`${mutedColor} text-[11px] mt-0.5`}>{dl.due}</p>
                 </div>
               </div>
             ))}
@@ -351,19 +352,19 @@ export default function StudyPlannerView() {
         {/* Focus Tip */}
         <div className="glass-card p-5 relative overflow-hidden">
           <div className="flex items-center gap-2 mb-3">
-            <span className="text-yellow-400">
+            <span className="text-yellow-500">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M9 18h6M10 22h4" />
                 <path d="M12 2a7 7 0 0 0-4 12.7c.6.5 1 1.4 1 2.3h6c0-.9.4-1.8 1-2.3A7 7 0 0 0 12 2z" />
               </svg>
             </span>
-            <h3 className="text-white font-bold text-base">Focus Tip</h3>
+            <h3 className={`font-bold text-base ${textColor}`}>Focus Tip</h3>
           </div>
           <div className="flex items-start gap-3">
-            <p className="text-gray-400 text-xs leading-relaxed flex-1">
+            <p className={`${mutedColor} text-xs leading-relaxed flex-1`}>
               Break your study into small sessions. 25 minutes of focus can take you further than you think.
             </p>
-            <div className="w-16 h-16 rounded-full bg-gradient-to-br from-purple-500/20 to-indigo-500/10 border border-purple-500/20 flex items-center justify-center flex-shrink-0 text-3xl">
+            <div className={`w-16 h-16 rounded-full flex items-center justify-center flex-shrink-0 text-3xl ${theme === 'light' ? 'bg-blue-50 border border-blue-100' : 'bg-gradient-to-br from-purple-500/20 to-indigo-500/10 border border-purple-500/20'}`}>
               ⏳
             </div>
           </div>

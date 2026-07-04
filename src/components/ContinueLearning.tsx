@@ -1,4 +1,5 @@
 import { useTheme } from '../context/ThemeContext';
+import { Link } from 'react-router-dom';
 
 export default function ContinueLearning() {
   const { theme } = useTheme();
@@ -40,12 +41,12 @@ export default function ContinueLearning() {
               </svg>
               15 min left
             </div>
-            <button className="btn-primary px-4 py-2 text-white text-[13px] flex items-center gap-2">
+            <Link to="/workspace/mathematics" className="btn-primary px-4 py-2 text-white text-[13px] flex items-center gap-2">
               Continue Lesson
               <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
                 <polygon points="5,3 19,12 5,21" />
               </svg>
-            </button>
+            </Link>
           </div>
         </div>
       </div>

@@ -11,6 +11,7 @@ import PastPapersPage from './pages/PastPapersPage';
 import ResourcesPage from './pages/ResourcesPage';
 import AccomplishmentsPage from './pages/AccomplishmentsPage';
 import SettingsPage from './pages/SettingsPage';
+import WorkspacePage from './pages/WorkspacePage';
 
 export default function App() {
   return (
@@ -28,6 +29,8 @@ export default function App() {
             <Route path="/resources" element={<ResourcesPage />} />
             <Route path="/accomplishments" element={<AccomplishmentsPage />} />
             <Route path="/settings" element={<SettingsPage />} />
+            <Route path="/workspace" element={<WorkspacePage />} />
+            <Route path="/workspace/:subjectId" element={<WorkspacePage />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Route>
         </Routes>
