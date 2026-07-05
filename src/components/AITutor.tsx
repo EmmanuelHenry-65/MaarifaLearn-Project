@@ -2,7 +2,7 @@ import { useTheme } from '../context/ThemeContext';
 
 const suggestions = [
   'Explain mitosis like I\'m 14',
-  'Compare photosynthesis in Kenya and South Africa',
+  'Compare mitosis in Kenya and South Africa',
   'Generate 5 quiz questions on Cell Division',
 ];
 
