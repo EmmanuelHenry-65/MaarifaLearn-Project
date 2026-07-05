@@ -323,10 +323,10 @@ export default function AITutorView() {
                 className="w-full flex items-center justify-between gap-2 px-3 py-2.5 rounded-xl bg-[rgba(17,24,50,0.5)] border border-[rgba(56,78,135,0.15)] text-left hover:border-cyan-500/30 transition-all group"
               >
                 <span className="flex items-center gap-2.5 min-w-0">
-                  <span className="w-5 h-5 rounded-full bg-[rgba(56,78,135,0.25)] flex items-center justify-center text-gray-400 text-[10px] font-bold flex-shrink-0">?</span>
+                  <span className="w-5 h-5 rounded-full bg-[rgba(56,78,135,0.25)] flex items-center justify-center text-gray-400 text-[10px] font-bold shrink-0">?</span>
                   <span className="text-gray-400 text-[11px] leading-relaxed group-hover:text-gray-300">{q}</span>
                 </span>
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-cyan-500 flex-shrink-0">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-cyan-500 shrink-0">
                   <line x1="5" y1="12" x2="19" y2="12" />
                   <polyline points="12,5 19,12 12,19" />
                 </svg>

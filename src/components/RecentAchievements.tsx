@@ -6,7 +6,7 @@ export default function RecentAchievements() {
         <button className="text-cyan-400 text-xs font-medium hover:text-cyan-300 transition-colors">View all</button>
       </div>
       <div className="flex items-center gap-3">
-        <div className="w-14 h-14 rounded-xl overflow-hidden flex-shrink-0">
+        <div className="w-14 h-14 rounded-xl overflow-hidden shrink-0">
           <img
             src="/images/achievement-badge.png"
             alt="Achievement"

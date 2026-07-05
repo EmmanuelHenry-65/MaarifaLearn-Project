@@ -23,7 +23,10 @@ export default function App() {
             <Route path="/" element={<DashboardPage />} />
             <Route path="/my-learning" element={<MyLearningPage />} />
             <Route path="/subjects" element={<SubjectsPage />} />
-            <Route path="/subjects/:subjectId" element={<SubjectDetailPage />} />
+            <Route
+              path="/subjects/:subjectId"
+              element={<SubjectDetailPage />}
+            />
             <Route path="/ai-tutor" element={<AITutorPage />} />
             <Route path="/study-planner" element={<StudyPlannerPage />} />
             <Route path="/past-papers" element={<PastPapersPage />} />
