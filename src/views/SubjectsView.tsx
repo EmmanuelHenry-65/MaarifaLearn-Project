@@ -7,20 +7,13 @@ const subjectsList = [
   { id: 'mathematics', name: 'Mathematics', category: 'core', progress: 82, completed: 24, total: 29, icon: '⨍', color: '#a855f7', barBg: 'bg-purple-500/20', fillClass: 'bg-purple-500', iconBg: 'bg-purple-500/15 border-purple-500/30 text-purple-400' },
   { id: 'english', name: 'English', category: 'core', progress: 75, completed: 20, total: 27, icon: '📖', color: '#3b82f6', barBg: 'bg-blue-500/20', fillClass: 'bg-blue-500', iconBg: 'bg-blue-500/15 border-blue-500/30 text-blue-400' },
   { id: 'kiswahili', name: 'Kiswahili', category: 'core', progress: 71, completed: 17, total: 24, icon: '🗣️', color: '#14b8a6', barBg: 'bg-teal-500/20', fillClass: 'bg-teal-500', iconBg: 'bg-teal-500/15 border-teal-500/30 text-teal-400' },
-  { id: 'cre', name: 'Christian Religious Education', category: 'core', progress: 70, completed: 14, total: 20, icon: '⛪', color: '#eab308', barBg: 'bg-yellow-500/20', fillClass: 'bg-yellow-500', iconBg: 'bg-yellow-500/15 border-yellow-500/30 text-yellow-400' },
-  { id: 'pe', name: 'Physical Education', category: 'core', progress: 45, completed: 9, total: 20, icon: '🏃', color: '#6366f1', barBg: 'bg-indigo-500/20', fillClass: 'bg-indigo-500', iconBg: 'bg-indigo-500/15 border-indigo-500/30 text-indigo-400' },
   { id: 'ict', name: 'ICT', category: 'core', progress: 88, completed: 22, total: 25, icon: '💻', color: '#22d3ee', barBg: 'bg-cyan-500/20', fillClass: 'bg-cyan-500', iconBg: 'bg-cyan-500/15 border-cyan-500/30 text-cyan-400' },
+  { id: 'pe', name: 'Physical Education', category: 'core', progress: 45, completed: 9, total: 20, icon: '🏃', color: '#6366f1', barBg: 'bg-indigo-500/20', fillClass: 'bg-indigo-500', iconBg: 'bg-indigo-500/15 border-indigo-500/30 text-indigo-400' },
+  { id: 'csl', name: 'Community Service Learning', category: 'core', progress: 54, completed: 11, total: 22, icon: '🤝', color: '#10b981', barBg: 'bg-emerald-500/20', fillClass: 'bg-emerald-500', iconBg: 'bg-emerald-500/15 border-emerald-500/30 text-emerald-400' },
   // Electives
   { id: 'chemistry', name: 'Chemistry', category: 'optional', progress: 56, completed: 14, total: 25, icon: '🧪', color: '#f97316', barBg: 'bg-orange-500/20', fillClass: 'bg-orange-500', iconBg: 'bg-orange-500/15 border-orange-500/30 text-orange-400' },
   { id: 'physics', name: 'Physics', category: 'optional', progress: 39, completed: 9, total: 23, icon: '⚛️', color: '#f59e0b', barBg: 'bg-amber-500/20', fillClass: 'bg-amber-500', iconBg: 'bg-amber-500/15 border-amber-500/30 text-amber-400' },
-  { id: 'computer-science', name: 'Computer Science', category: 'optional', progress: 78, completed: 18, total: 24, icon: '🖥️', color: '#0ea5e9', barBg: 'bg-sky-500/20', fillClass: 'bg-sky-500', iconBg: 'bg-sky-500/15 border-sky-500/30 text-sky-400' },
-  // Extra (kept for the All view)
-  { id: 'biology', name: 'Biology', category: 'core', progress: 68, completed: 18, total: 26, icon: '🌿', color: '#22c55e', barBg: 'bg-emerald-500/20', fillClass: 'bg-emerald-500', iconBg: 'bg-emerald-500/15 border-emerald-500/30 text-emerald-400' },
-  { id: 'geography', name: 'Geography', category: 'optional', progress: 60, completed: 15, total: 25, icon: '🌍', color: '#ec4899', barBg: 'bg-pink-500/20', fillClass: 'bg-pink-500', iconBg: 'bg-pink-500/15 border-pink-500/30 text-pink-400' },
-  { id: 'history', name: 'History', category: 'optional', progress: 40, completed: 10, total: 25, icon: '🏛️', color: '#06b6d4', barBg: 'bg-cyan-500/20', fillClass: 'bg-cyan-500', iconBg: 'bg-cyan-500/15 border-cyan-500/30 text-cyan-400' },
-  { id: 'business-studies', name: 'Business Studies', category: 'optional', progress: 52, completed: 11, total: 21, icon: '📊', color: '#84cc16', barBg: 'bg-lime-500/20', fillClass: 'bg-lime-500', iconBg: 'bg-lime-500/15 border-lime-500/30 text-lime-400' },
-  { id: 'agriculture', name: 'Agriculture', category: 'optional', progress: 35, completed: 7, total: 20, icon: '🌾', color: '#65a30d', barBg: 'bg-green-500/20', fillClass: 'bg-green-500', iconBg: 'bg-green-500/15 border-green-500/30 text-green-400' },
-  { id: 'french', name: 'French', category: 'optional', progress: 25, completed: 5, total: 20, icon: '🇫🇷', color: '#f43f5e', barBg: 'bg-rose-500/20', fillClass: 'bg-rose-500', iconBg: 'bg-rose-500/15 border-rose-500/30 text-rose-400' }
+  { id: 'computer-studies', name: 'Computer Studies', category: 'optional', progress: 78, completed: 18, total: 24, icon: '🖥️', color: '#0ea5e9', barBg: 'bg-sky-500/20', fillClass: 'bg-sky-500', iconBg: 'bg-sky-500/15 border-sky-500/30 text-sky-400' },
 ];
 
 const recentlyAccessed = [

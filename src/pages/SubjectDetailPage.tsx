@@ -4,12 +4,12 @@ const subjectData: Record<string, { name: string; icon: string; progress: number
   mathematics: { name: 'Mathematics', icon: '⨍', progress: 82, color: 'text-blue-400 bg-blue-500/10 border-blue-500/30', description: 'Master algebra, geometry, calculus and more.' },
   english: { name: 'English', icon: '📖', progress: 75, color: 'text-purple-400 bg-purple-500/10 border-purple-500/30', description: 'Build strong communication and literary skills.' },
   kiswahili: { name: 'Kiswahili', icon: '🗣️', progress: 71, color: 'text-teal-400 bg-teal-500/10 border-teal-500/30', description: 'Kusoma, kuandika na kuzungumza Kiswahili.' },
-  cre: { name: 'Christian Religious Education', icon: '⛪', progress: 70, color: 'text-yellow-400 bg-yellow-500/10 border-yellow-500/30', description: 'Explore Christian beliefs, values and traditions.' },
-  pe: { name: 'Physical Education', icon: '🏃', progress: 45, color: 'text-indigo-400 bg-indigo-500/10 border-indigo-500/30', description: 'Build fitness, teamwork and sportsmanship.' },
   ict: { name: 'ICT', icon: '💻', progress: 88, color: 'text-cyan-400 bg-cyan-500/10 border-cyan-500/30', description: 'Learn digital literacy, programming and more.' },
+  pe: { name: 'Physical Education', icon: '🏃', progress: 45, color: 'text-indigo-400 bg-indigo-500/10 border-indigo-500/30', description: 'Build fitness, teamwork and sportsmanship.' },
+  csl: { name: 'Community Service Learning', icon: '🤝', progress: 54, color: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/30', description: 'Engage in community projects and service learning.' },
   chemistry: { name: 'Chemistry', icon: '🧪', progress: 56, color: 'text-orange-400 bg-orange-500/10 border-orange-500/30', description: 'Explore matter, reactions, and the elements.' },
   physics: { name: 'Physics', icon: '⚛️', progress: 39, color: 'text-amber-400 bg-amber-500/10 border-amber-500/30', description: 'Understand the laws of motion, energy and the universe.' },
-  'computer-science': { name: 'Computer Science', icon: '🖥️', progress: 78, color: 'text-cyan-400 bg-cyan-500/10 border-cyan-500/30', description: 'Learn algorithms, data structures and software engineering.' },
+  'computer-studies': { name: 'Computer Studies', icon: '🖥️', progress: 78, color: 'text-cyan-400 bg-cyan-500/10 border-cyan-500/30', description: 'Learn algorithms, data structures and software engineering.' },
 };
 
 export default function SubjectDetailPage() {
