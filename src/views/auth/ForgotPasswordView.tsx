@@ -1,12 +1,35 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import AuthInput from '../../components/auth/AuthInput';
 import AuthButton from '../../components/auth/AuthButton';
 import { useTheme } from '../../context/ThemeContext';
+import { forgotPassword } from '../../services/auth.service';
 
 export default function ForgotPasswordView() {
   const { theme } = useTheme();
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [sent, setSent] = useState(false);
+
   const textColor = theme === 'light' ? 'text-slate-900' : 'text-white';
   const mutedColor = theme === 'light' ? 'text-slate-500' : 'text-gray-400';
+
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const formData = new FormData(e.currentTarget);
+    const email = String(formData.get('email') ?? '').trim();
+
+    setSubmitting(true);
+    setError(null);
+    const { error: resetError } = await forgotPassword(email);
+    setSubmitting(false);
+
+    if (resetError) {
+      setError(resetError.message);
+      return;
+    }
+    setSent(true);
+  }
 
   return (
     <div className="space-y-6">
@@ -15,10 +38,15 @@ export default function ForgotPasswordView() {
         <p className={`text-sm ${mutedColor}`}>Enter your email to receive a reset link.</p>
       </div>
 
-      <form className="space-y-4" onSubmit={(e) => e.preventDefault()}>
-        <AuthInput label="Email" type="email" placeholder="you@example.com" />
-        <AuthButton type="submit">Send Reset Link</AuthButton>
-      </form>
+      {sent ? (
+        <p className="text-center text-sm text-emerald-400">If an account exists for that email, a reset link is on its way.</p>
+      ) : (
+        <form className="space-y-4" onSubmit={handleSubmit}>
+          <AuthInput label="Email" name="email" type="email" placeholder="you@example.com" required />
+          {error && <p className="text-red-400 text-xs font-medium">{error}</p>}
+          <AuthButton type="submit" disabled={submitting}>{submitting ? 'Sending...' : 'Send Reset Link'}</AuthButton>
+        </form>
+      )}
 
       <p className={`text-center text-sm ${mutedColor}`}>
         <Link to="/login" className="text-cyan-400 hover:text-cyan-300 font-semibold flex items-center justify-center gap-1">
