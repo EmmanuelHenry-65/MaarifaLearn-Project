@@ -3,7 +3,7 @@ import { Navigate, useParams } from 'react-router-dom';
 import { getDefaultLesson, getDefaultTopic, getWorkspaceSubject } from '../data/workspaceData';
 import type { WorkspaceLesson, WorkspaceMode, WorkspaceTopic } from '../data/workspaceData';
 import { useAuth } from '../context/AuthContext';
-import { touchTopicAccess, recordTopicProgress } from '../services/learning.service';
+import { touchTopicAccess, recordTopicProgress, resolveTopicId } from '../services/learning.service';
 import AISidePanel from '../components/workspace/AISidePanel';
 import FloatingAIButton from '../components/workspace/FloatingAIButton';
 import LessonContent from '../components/workspace/LessonContent';
@@ -24,6 +24,7 @@ export default function WorkspaceView() {
   const [activeTool, setActiveTool] = useState('');
   const [aiOpen, setAiOpen] = useState(false);
   const [progressBump, setProgressBump] = useState(0);
+  const [resolvedTopicId, setResolvedTopicId] = useState<string | null>(null);
 
   useEffect(() => {
     localStorage.setItem('workspace-sidebar-collapsed', String(collapsed));
@@ -39,8 +40,17 @@ export default function WorkspaceView() {
   }, [subject, subjectId]);
 
   useEffect(() => {
+    setResolvedTopicId(null);
     if (!user || !activeTopic) return;
-    touchTopicAccess(user.id, activeTopic.id).catch(() => {});
+    let cancelled = false;
+    resolveTopicId(activeTopic.id).then((id) => {
+      if (cancelled || !id) return;
+      setResolvedTopicId(id);
+      touchTopicAccess(user.id, id).catch(() => {});
+    });
+    return () => {
+      cancelled = true;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id, activeTopic?.id]);
 
@@ -84,8 +94,8 @@ export default function WorkspaceView() {
             progressBump={progressBump}
             onProgressBump={() => {
               setProgressBump((value) => Math.min(18, value + 2));
-              if (user && activeTopic) {
-                recordTopicProgress(user.id, activeTopic.id, 15).catch(() => {});
+              if (user && resolvedTopicId) {
+                recordTopicProgress(user.id, resolvedTopicId, 15).catch(() => {});
               }
             }}
           />

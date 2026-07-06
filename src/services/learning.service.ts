@@ -159,6 +159,20 @@ export async function getUpcomingLessons(monthDate: Date): Promise<UpcomingLesso
   }));
 }
 
+const topicIdBySlug = new Map<string, string>();
+
+/** Resolves a workspace curriculum slug (e.g. "linear-equations-topic-1") to its real topics.id UUID. */
+export async function resolveTopicId(topicSlug: string): Promise<string | null> {
+  const cached = topicIdBySlug.get(topicSlug);
+  if (cached) return cached;
+
+  const { data, error } = await supabase.from('topics').select('id').eq('slug', topicSlug).maybeSingle();
+  if (error || !data) return null;
+
+  topicIdBySlug.set(topicSlug, data.id);
+  return data.id;
+}
+
 export async function toggleBookmark(userId: string, topicId: string, shouldBookmark: boolean): Promise<void> {
   if (shouldBookmark) {
     const { error } = await supabase
