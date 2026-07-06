@@ -20,8 +20,10 @@ export function validateEmail(value: string): string | null {
   return null;
 }
 
+// Optional field (existing accounts may not have picked one yet) — only
+// validated for format once the user actually enters something.
 export function validateUsername(value: string): string | null {
-  if (!value.trim()) return 'Username is required.';
+  if (!value.trim()) return null;
   if (!USERNAME_PATTERN.test(value.trim())) {
     return 'Username must be 3-20 characters and contain only letters, numbers, or underscores.';
   }
