@@ -6,6 +6,8 @@ import { getProfile } from '../services/learning.service';
 
 interface SidebarProps {
   activeTab: string;
+  open: boolean;
+  onClose: () => void;
 }
 
 const ThemeSpecificIcon = ({ theme, isActive, originalIcon }: { theme: 'dark' | 'light', isActive: boolean, originalIcon: React.ReactNode }) => {
@@ -93,7 +95,7 @@ const icons: Record<string, React.JSX.Element> = {
   ),
 };
 
-export default function Sidebar(_: SidebarProps) {
+export default function Sidebar({ open, onClose }: SidebarProps) {
   const { theme } = useTheme();
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -121,19 +123,36 @@ export default function Sidebar(_: SidebarProps) {
     .toUpperCase();
 
   return (
-    <aside className={`fixed left-0 top-0 bottom-0 w-[200px] flex flex-col border-r z-50 ${theme === 'light' ? 'bg-gradient-to-b from-white to-slate-50 border-slate-200 shadow-xl shadow-slate-200/50' : 'bg-gradient-to-b from-[#0d1225] to-[#0a0e1a] border-[rgba(56,78,135,0.2)]'}`}>
+    <aside
+      className={`fixed left-0 top-0 bottom-0 w-[220px] sm:w-[200px] flex flex-col border-r z-50 transition-transform duration-300 lg:translate-x-0 ${
+        open ? 'translate-x-0' : '-translate-x-full'
+      } ${theme === 'light' ? 'bg-gradient-to-b from-white to-slate-50 border-slate-200 shadow-xl shadow-slate-200/50' : 'bg-gradient-to-b from-[#0d1225] to-[#0a0e1a] border-[rgba(56,78,135,0.2)]'}`}
+    >
       {/* Logo */}
-      <div className="flex items-center gap-2.5 px-5 py-5 flex-shrink-0">
-        <div className="relative w-9 h-9 rounded-xl bg-gradient-to-br from-teal-400 to-blue-600 flex items-center justify-center shadow-lg shadow-teal-500/20">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" />
-            <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" />
+      <div className="flex items-center justify-between gap-2.5 px-5 py-5 flex-shrink-0">
+        <div className="flex items-center gap-2.5">
+          <div className="relative w-9 h-9 rounded-xl bg-gradient-to-br from-teal-400 to-blue-600 flex items-center justify-center shadow-lg shadow-teal-500/20">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" />
+              <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" />
+            </svg>
+          </div>
+          <div>
+            <span className="text-white font-bold text-sm leading-tight block">Maarifa</span>
+            <span className="text-teal-400 font-bold text-sm leading-tight block">Learn</span>
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="Close menu"
+          className={`lg:hidden p-1.5 rounded-lg ${theme === 'light' ? 'text-slate-500 hover:bg-slate-100' : 'text-gray-400 hover:bg-white/5'}`}
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+            <line x1="18" y1="6" x2="6" y2="18" />
+            <line x1="6" y1="6" x2="18" y2="18" />
           </svg>
-        </div>
-        <div>
-          <span className="text-white font-bold text-sm leading-tight block">Maarifa</span>
-          <span className="text-teal-400 font-bold text-sm leading-tight block">Learn</span>
-        </div>
+        </button>
       </div>
 
       {/* Nav Items */}
@@ -143,10 +162,11 @@ export default function Sidebar(_: SidebarProps) {
             key={item.label}
             to={item.path}
             end={item.path === '/'}
+            onClick={onClose}
             className={({ isActive }) =>
               `sidebar-item w-full flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] font-medium transition-all group ${
                 isActive
-                  ? theme === 'light' 
+                  ? theme === 'light'
                     ? 'active text-cyan-700 bg-cyan-50 border-l-[3px] border-cyan-600 font-bold'
                     : 'active text-cyan-400 bg-cyan-400/10 border-l-[3px] border-cyan-400 font-bold'
                   : theme === 'light'
@@ -157,10 +177,10 @@ export default function Sidebar(_: SidebarProps) {
           >
             {({ isActive }) => (
               <>
-                <ThemeSpecificIcon 
-                  theme={theme} 
-                  isActive={isActive} 
-                  originalIcon={icons[item.icon]} 
+                <ThemeSpecificIcon
+                  theme={theme}
+                  isActive={isActive}
+                  originalIcon={icons[item.icon]}
                 />
                 {item.label}
               </>

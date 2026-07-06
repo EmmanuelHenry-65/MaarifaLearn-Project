@@ -19,7 +19,7 @@ export async function getTodayStudyTasks(): Promise<TodayTask[]> {
     .from('study_tasks')
     .select(
       `
-      id, title, due_date,
+      id, title, due_date, subject,
       lesson:lessons ( title, subject:subjects ( code, name ) )
     `,
     )
@@ -27,7 +27,13 @@ export async function getTodayStudyTasks(): Promise<TodayTask[]> {
     .eq('completed', false)
     .order('created_at', { ascending: true })
     .returns<
-      { id: string; title: string; due_date: string | null; lesson: { title: string; subject: { code: string; name: string } | null } | null }[]
+      {
+        id: string;
+        title: string;
+        due_date: string | null;
+        subject: string | null;
+        lesson: { title: string; subject: { code: string; name: string } | null } | null;
+      }[]
     >();
 
   if (error) throw error;
@@ -36,8 +42,11 @@ export async function getTodayStudyTasks(): Promise<TodayTask[]> {
     id: row.id,
     title: row.title,
     dueDate: row.due_date,
+    // Lesson-linked tasks get their subject from the curriculum; ad-hoc tasks
+    // (created from the Study Planner page without a lesson) fall back to
+    // the free-text subject entered there.
     subjectCode: row.lesson?.subject?.code ?? null,
-    subjectName: row.lesson?.subject?.name ?? null,
+    subjectName: row.lesson?.subject?.name ?? row.subject ?? null,
     lessonTitle: row.lesson?.title ?? null,
   }));
 }

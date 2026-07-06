@@ -47,6 +47,7 @@ export default function AppLayout() {
   const { theme } = useTheme();
   const { user } = useAuth();
   const [firstName, setFirstName] = useState<string | null>(null);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   // Loads the signed-in user's saved theme from their account once per session.
   usePreferencesSync();
@@ -64,6 +65,11 @@ export default function AppLayout() {
     };
   }, [user]);
 
+  // Close the mobile drawer whenever the route changes (e.g. after tapping a nav link).
+  useEffect(() => {
+    setSidebarOpen(false);
+  }, [location.pathname]);
+
   // For subject detail pages like /subjects/mathematics, treat as Subjects
   const isSubjectDetail = location.pathname.startsWith('/subjects/');
   const isWorkspace = location.pathname.startsWith('/workspace');
@@ -79,10 +85,13 @@ export default function AppLayout() {
       <div className={`fixed inset-0 pointer-events-none transition-opacity duration-500 ${theme === 'light' ? 'opacity-20 bg-[radial-gradient(ellipse_at_top_right,rgba(6,182,212,0.1)_0%,transparent_50%)]' : 'bg-[radial-gradient(ellipse_at_top_right,rgba(6,182,212,0.04)_0%,transparent_50%)]'}`} />
       <div className={`fixed inset-0 pointer-events-none transition-opacity duration-500 ${theme === 'light' ? 'opacity-10 bg-[radial-gradient(ellipse_at_bottom_left,rgba(139,92,246,0.05)_0%,transparent_50%)]' : 'bg-[radial-gradient(ellipse_at_bottom_left,rgba(139,92,246,0.03)_0%,transparent_50%)]'}`} />
 
-      <Sidebar activeTab={activeTab} />
+      {sidebarOpen && (
+        <div className="fixed inset-0 bg-black/50 z-40 lg:hidden" onClick={() => setSidebarOpen(false)} />
+      )}
+      <Sidebar activeTab={activeTab} open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
-      <div className="flex-1 ml-[200px] relative z-10 flex flex-col p-6 overflow-hidden min-w-0">
-        <TopNav title={title} subtitle={meta.subtitle} />
+      <div className="flex-1 lg:ml-[200px] relative z-10 flex flex-col p-4 sm:p-6 overflow-hidden min-w-0">
+        <TopNav title={title} subtitle={meta.subtitle} onMenuClick={() => setSidebarOpen(true)} />
         <div key={location.pathname} className="page-transition flex-1 min-h-0">
           <Outlet />
         </div>
