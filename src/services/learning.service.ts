@@ -45,6 +45,15 @@ export interface PerformanceStats {
   xp: number;
 }
 
+export interface SubjectSummary {
+  code: string;
+  name: string;
+  completedCount: number;
+  totalCount: number;
+  progress: number;
+  lastAccessedAt: string | null;
+}
+
 /** Ensures a profiles row exists for this user without clobbering existing fields. */
 export async function ensureProfile(user: User): Promise<void> {
   const { error } = await supabase.from('profiles').upsert(
@@ -224,6 +233,50 @@ export function computeStreak(topics: LearningTopic[]): StreakInfo {
   }
 
   return { days, currentStreak };
+}
+
+/** One summary row per distinct subject in the curriculum, including subjects with zero progress. */
+export function aggregateSubjects(topics: LearningTopic[]): SubjectSummary[] {
+  const bySubject = new Map<string, { name: string; completed: number; total: number; lastAccessedAt: string | null }>();
+
+  for (const topic of topics) {
+    const entry = bySubject.get(topic.subjectCode) ?? { name: topic.subjectName, completed: 0, total: 0, lastAccessedAt: null };
+    entry.total += 1;
+    if (topic.completed) entry.completed += 1;
+    if (topic.lastAccessedAt && (!entry.lastAccessedAt || topic.lastAccessedAt > entry.lastAccessedAt)) {
+      entry.lastAccessedAt = topic.lastAccessedAt;
+    }
+    bySubject.set(topic.subjectCode, entry);
+  }
+
+  return Array.from(bySubject.entries())
+    .map(([code, entry]) => ({
+      code,
+      name: entry.name,
+      completedCount: entry.completed,
+      totalCount: entry.total,
+      progress: entry.total ? Math.round((entry.completed / entry.total) * 100) : 0,
+      lastAccessedAt: entry.lastAccessedAt,
+    }))
+    .sort((a, b) => a.name.localeCompare(b.name));
+}
+
+/** Longest-ever consecutive-day streak, scanning every distinct active date (not just the trailing week). */
+export function computeLongestStreak(topics: LearningTopic[]): number {
+  const activeDates = Array.from(
+    new Set(topics.filter((t) => t.lastAccessedAt).map((t) => new Date(t.lastAccessedAt as string).toISOString().slice(0, 10))),
+  ).sort();
+
+  if (activeDates.length === 0) return 0;
+
+  let longest = 1;
+  let current = 1;
+  for (let i = 1; i < activeDates.length; i++) {
+    const diffDays = Math.round((new Date(activeDates[i]).getTime() - new Date(activeDates[i - 1]).getTime()) / 86400000);
+    current = diffDays === 1 ? current + 1 : 1;
+    longest = Math.max(longest, current);
+  }
+  return longest;
 }
 
 const XP_PER_COMPLETED_TOPIC = 50;

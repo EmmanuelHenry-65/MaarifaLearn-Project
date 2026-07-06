@@ -1,9 +1,17 @@
-const topStats = [
-  { value: '34', label: 'Total Achievements', sub: 'Keep it up! You\'re doing great.', iconBg: 'text-blue-400 bg-blue-500/10 border-blue-500/20', iconType: 'trophy' },
-  { value: '12', label: 'Day Streak', sub: 'You\'re on fire!', iconBg: 'text-green-400 bg-green-500/10 border-green-500/20', iconType: 'fire' },
-  { value: '860', label: 'XP Earned', sub: 'Keep learning, earn more XP!', iconBg: 'text-purple-400 bg-purple-500/10 border-purple-500/20', iconType: 'star' },
-  { value: '5', label: 'Rank', sub: 'Top 12% of learners in Grade 10', iconBg: 'text-yellow-400 bg-yellow-500/10 border-yellow-500/20', iconType: 'crown' },
-];
+import { useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
+import { ensureProfile, getMyLearningData, computeStreak, computeLongestStreak, type LearningTopic } from '../services/learning.service';
+import {
+  BADGE_DEFINITIONS,
+  MILESTONE_DEFINITIONS,
+  getAchievementContext,
+  syncEarnedBadges,
+  getEarnedAchievements,
+  getRank,
+  type AchievementContext,
+  type EarnedAchievement,
+} from '../services/achievements.service';
 
 function StatIcon({ type, className }: { type: string; className?: string }) {
   if (type === 'trophy') {
@@ -21,35 +29,122 @@ function StatIcon({ type, className }: { type: string; className?: string }) {
   return null;
 }
 
-const badges = [
-  { name: 'First Steps', desc: 'Complete your first lesson', image: '/images/badge-first-steps.png', earned: true, date: 'May 10, 2025', glowColor: 'shadow-purple-500/40' },
-  { name: 'Consistent Learner', desc: 'Study for 7 days in a row', image: '/images/badge-consistent-learner.png', earned: true, date: 'May 20, 2025', glowColor: 'shadow-green-500/40' },
-  { name: 'Quiz Master', desc: 'Score 90% or more in 5 quizzes', image: '/images/badge-quiz-master.png', earned: true, date: 'May 24, 2025', glowColor: 'shadow-blue-500/40' },
-  { name: 'Top Performer', desc: 'Score 80% or more in 10 quizzes', image: '/images/badge-top-performer.png', earned: true, date: 'May 24, 2025', glowColor: 'shadow-yellow-500/40' },
-  { name: 'Knowledge Seeker', desc: 'Complete 20 lessons', image: '/images/badge-knowledge-seeker.png', earned: true, date: 'Jun 1, 2025', glowColor: 'shadow-purple-500/40' },
-  { name: 'Exam Ready', desc: 'Complete 5 past papers', icon: '🔒', color: 'bg-slate-500', earned: false, progress: '3 / 5' },
-];
-
-const milestones = [
-  { name: 'Lessons Completed', current: 45, total: 50, percent: 90, color: 'bg-green-500', icon: '🎯', iconBg: 'bg-green-500/15 border-green-500/30 text-green-400' },
-  { name: 'Quizzes Attempted', current: 28, total: 30, percent: 93, color: 'bg-blue-500', icon: '📝', iconBg: 'bg-blue-500/15 border-blue-500/30 text-blue-400' },
-  { name: 'Study Hours', current: 36, total: 50, percent: 72, color: 'bg-purple-500', icon: '⏱️', iconBg: 'bg-purple-500/15 border-purple-500/30 text-purple-400' },
-  { name: 'Past Papers Solved', current: 6, total: 10, percent: 60, color: 'bg-orange-500', icon: '📄', iconBg: 'bg-orange-500/15 border-orange-500/30 text-orange-400' },
-  { name: 'XP Goal', current: 860, total: 1000, percent: 86, color: 'bg-cyan-500', icon: '⭐', iconBg: 'bg-cyan-500/15 border-cyan-500/30 text-cyan-400' },
-];
-
-const recentAchievements = [
-  { icon: '📖', title: 'Completed a lesson in Biology', xp: '+20 XP', time: '2 days ago', color: 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400' },
-  { icon: '🧪', title: 'Scored 95% in Chemistry Quiz', xp: '+30 XP', time: 'Yesterday', color: 'bg-orange-500/10 border-orange-500/30 text-orange-400' },
-  { icon: '🔥', title: '7 Day Study Streak', xp: '+50 XP', time: '2 days ago', color: 'bg-purple-500/10 border-purple-500/30 text-purple-400' },
-  { icon: '📐', title: 'Completed Mathematics Lesson', xp: '+20 XP', time: '3 days ago', color: 'bg-blue-500/10 border-blue-500/30 text-blue-400' },
-  { icon: '📝', title: 'Solved a Past Paper', xp: '+40 XP', time: '5 days ago', color: 'bg-pink-500/10 border-pink-500/30 text-pink-400' },
-];
-
-const streakDays = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
-const streakCompleted = [true, true, true, true, true, true, false];
+function formatRelativeDate(iso: string): string {
+  const diffMs = Date.now() - new Date(iso).getTime();
+  const minutes = Math.floor(diffMs / 60000);
+  if (minutes < 1) return 'Just now';
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  if (days === 1) return 'Yesterday';
+  if (days < 7) return `${days} days ago`;
+  return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
 
 export default function AchievementsView() {
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const [topics, setTopics] = useState<LearningTopic[]>([]);
+  const [earned, setEarned] = useState<EarnedAchievement[]>([]);
+  const [rank, setRank] = useState<number | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [showAllActivity, setShowAllActivity] = useState(false);
+
+  useEffect(() => {
+    if (!user) return;
+    let cancelled = false;
+    setLoading(true);
+    setLoadError(null);
+    (async () => {
+      try {
+        await ensureProfile(user);
+        const fetchedTopics = await getMyLearningData();
+        const streak = computeStreak(fetchedTopics);
+        const longestStreak = computeLongestStreak(fetchedTopics);
+        const ctx = getAchievementContext(fetchedTopics, streak.currentStreak, longestStreak);
+        await syncEarnedBadges(user.id, ctx);
+        const [fetchedEarned, fetchedRank] = await Promise.all([getEarnedAchievements(user.id), getRank()]);
+        if (!cancelled) {
+          setTopics(fetchedTopics);
+          setEarned(fetchedEarned);
+          setRank(fetchedRank);
+        }
+      } catch (err) {
+        if (!cancelled) setLoadError(err instanceof Error ? err.message : 'Failed to load your achievements.');
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id]);
+
+  const streak = useMemo(() => computeStreak(topics), [topics]);
+  const longestStreak = useMemo(() => computeLongestStreak(topics), [topics]);
+  const ctx: AchievementContext = useMemo(
+    () => getAchievementContext(topics, streak.currentStreak, longestStreak),
+    [topics, streak.currentStreak, longestStreak],
+  );
+
+  const badges = useMemo(
+    () =>
+      BADGE_DEFINITIONS.map((def) => {
+        const earnedRow = earned.find((e) => e.title === def.name);
+        return {
+          def,
+          isEarned: Boolean(earnedRow),
+          earnedAt: earnedRow?.earnedAt ?? null,
+          percent: def.progressPercent(ctx),
+          label: def.progressLabel(ctx),
+        };
+      }),
+    [earned, ctx],
+  );
+
+  const milestones = useMemo(
+    () =>
+      MILESTONE_DEFINITIONS.map((def) => {
+        const current = def.current(ctx);
+        const total = def.total(ctx);
+        return { def, current, total, percent: total ? Math.min(100, Math.round((current / total) * 100)) : 0 };
+      }),
+    [ctx],
+  );
+
+  const nextBadge = useMemo(
+    () => [...badges].filter((b) => !b.isEarned).sort((a, b) => b.percent - a.percent)[0],
+    [badges],
+  );
+
+  const topStats = [
+    { value: String(earned.length), label: 'Total Achievements', sub: earned.length > 0 ? 'Keep it up! You\'re doing great.' : 'Start learning to earn your first one.', iconBg: 'text-blue-400 bg-blue-500/10 border-blue-500/20', iconType: 'trophy' },
+    { value: String(streak.currentStreak), label: 'Day Streak', sub: streak.currentStreak > 0 ? "You're on fire!" : 'Study today to start a streak.', iconBg: 'text-green-400 bg-green-500/10 border-green-500/20', iconType: 'fire' },
+    { value: ctx.xp.toLocaleString(), label: 'XP Earned', sub: 'Keep learning, earn more XP!', iconBg: 'text-purple-400 bg-purple-500/10 border-purple-500/20', iconType: 'star' },
+    { value: rank != null ? `#${rank}` : '—', label: 'Rank', sub: 'Among all learners on Maarifa', iconBg: 'text-yellow-400 bg-yellow-500/10 border-yellow-500/20', iconType: 'crown' },
+  ];
+
+  const visibleActivity = showAllActivity ? earned : earned.slice(0, 5);
+
+  if (loading) {
+    return (
+      <div className="flex-1 flex items-center justify-center min-h-0">
+        <p className="text-gray-500">Loading your achievements...</p>
+      </div>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <div className="flex-1 flex items-center justify-center min-h-0">
+        <p className="text-red-400 text-sm">{loadError}</p>
+      </div>
+    );
+  }
+
   return (
     <div className="flex gap-6 mt-2 flex-1 min-h-0">
       {/* Main Content */}
@@ -76,35 +171,34 @@ export default function AchievementsView() {
           <div className="flex items-center justify-between mb-4">
             <div>
               <h3 className="text-white font-bold text-base">Badges</h3>
-              <p className="text-gray-500 text-xs">Earn badges by completing tasks and achieving milestones.</p>
+              <p className="text-gray-500 text-xs">Earn badges by completing topics and achieving milestones.</p>
             </div>
-            <button className="text-cyan-400 text-xs font-medium hover:text-cyan-300">View all badges</button>
           </div>
           <div className="grid grid-cols-6 gap-3">
-            {badges.map((badge, i) => (
-              <div key={i} className="bg-[rgba(17,24,50,0.6)] border border-[rgba(56,78,135,0.2)] rounded-xl p-4 text-center flex flex-col items-center hover:border-cyan-500/30 transition-all group">
-                {badge.earned ? (
-                  <div className={`w-16 h-16 rounded-full overflow-hidden mb-3 shadow-lg ${badge.glowColor} group-hover:scale-110 transition-transform`}>
-                    <img src={badge.image} alt={badge.name} className="w-full h-full object-cover" />
+            {badges.map(({ def, isEarned, earnedAt, percent, label }) => (
+              <div key={def.key} className="bg-[rgba(17,24,50,0.6)] border border-[rgba(56,78,135,0.2)] rounded-xl p-4 text-center flex flex-col items-center hover:border-cyan-500/30 transition-all group">
+                {isEarned && def.image ? (
+                  <div className={`w-16 h-16 rounded-full overflow-hidden mb-3 shadow-lg ${def.glowColor} group-hover:scale-110 transition-transform`}>
+                    <img src={def.image} alt={def.name} className="w-full h-full object-cover" />
                   </div>
                 ) : (
-                  <div className="w-16 h-16 rounded-full bg-slate-700/50 border border-slate-600 flex items-center justify-center text-3xl mb-3 grayscale-[0.6]">
-                    {badge.icon}
+                  <div className={`w-16 h-16 rounded-full bg-slate-700/50 border border-slate-600 flex items-center justify-center text-3xl mb-3 ${isEarned ? '' : 'grayscale-[0.6]'}`}>
+                    {def.icon ?? '🔒'}
                   </div>
                 )}
-                <p className="text-white font-bold text-xs leading-tight">{badge.name}</p>
-                <p className="text-gray-500 text-[10px] mt-1 leading-tight line-clamp-2">{badge.desc}</p>
-                {badge.earned ? (
+                <p className="text-white font-bold text-xs leading-tight">{def.name}</p>
+                <p className="text-gray-500 text-[10px] mt-1 leading-tight line-clamp-2">{def.desc}</p>
+                {isEarned ? (
                   <span className="mt-2 px-2.5 py-0.5 rounded-full bg-green-500/15 text-green-400 text-[10px] font-bold border border-green-500/20">Earned</span>
                 ) : (
                   <div className="mt-2 w-full">
                     <div className="h-1.5 bg-[rgba(56,78,135,0.25)] rounded-full overflow-hidden">
-                      <div className="h-full bg-blue-500 rounded-full" style={{ width: '60%' }} />
+                      <div className="h-full bg-blue-500 rounded-full" style={{ width: `${percent}%` }} />
                     </div>
-                    <p className="text-[10px] text-gray-500 mt-1">{badge.progress}</p>
+                    <p className="text-[10px] text-gray-500 mt-1">{label}</p>
                   </div>
                 )}
-                {badge.earned && <p className="text-gray-600 text-[10px] mt-1">{badge.date}</p>}
+                {isEarned && earnedAt && <p className="text-gray-600 text-[10px] mt-1">{formatRelativeDate(earnedAt)}</p>}
               </div>
             ))}
           </div>
@@ -114,23 +208,22 @@ export default function AchievementsView() {
         <div className="glass-card p-5">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-white font-bold text-base">Milestones</h3>
-            <button className="text-cyan-400 text-xs font-medium hover:text-cyan-300">View all milestones</button>
           </div>
-          <div className="grid grid-cols-5 gap-3">
-            {milestones.map((m, i) => (
-              <div key={i} className="bg-[rgba(17,24,50,0.5)] border border-[rgba(56,78,135,0.15)] rounded-xl p-4 hover:border-cyan-500/20 transition-all">
+          <div className="grid grid-cols-4 gap-3">
+            {milestones.map(({ def, current, total, percent }) => (
+              <div key={def.key} className="bg-[rgba(17,24,50,0.5)] border border-[rgba(56,78,135,0.15)] rounded-xl p-4 hover:border-cyan-500/20 transition-all">
                 <div className="flex items-center gap-3 mb-3">
-                  <div className={`w-9 h-9 rounded-full border flex items-center justify-center text-base ${m.iconBg}`}>
-                    {m.icon}
+                  <div className={`w-9 h-9 rounded-full border flex items-center justify-center text-base ${def.iconBg}`}>
+                    {def.icon}
                   </div>
-                  <p className="text-white text-xs font-semibold leading-tight">{m.name}</p>
+                  <p className="text-white text-xs font-semibold leading-tight">{def.name}</p>
                 </div>
                 <div className="flex justify-between text-xs mb-1.5">
-                  <span className="text-gray-300 font-bold">{m.current} / {m.total}</span>
-                  <span className="text-gray-500">{m.percent}%</span>
+                  <span className="text-gray-300 font-bold">{current} / {total}</span>
+                  <span className="text-gray-500">{percent}%</span>
                 </div>
                 <div className="h-1.5 bg-[rgba(56,78,135,0.25)] rounded-full overflow-hidden">
-                  <div className={`h-full rounded-full ${m.color}`} style={{ width: `${m.percent}%` }} />
+                  <div className={`h-full rounded-full ${def.color}`} style={{ width: `${percent}%` }} />
                 </div>
               </div>
             ))}
@@ -146,22 +239,30 @@ export default function AchievementsView() {
         <div className="glass-card p-5">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-white font-bold text-base">Recent Achievements</h3>
-            <button className="text-cyan-400 text-xs font-medium hover:text-cyan-300">View all activity</button>
+            {earned.length > 5 && (
+              <button onClick={() => setShowAllActivity((v) => !v)} className="text-cyan-400 text-xs font-medium hover:text-cyan-300">
+                {showAllActivity ? 'Show less' : 'View all activity'}
+              </button>
+            )}
           </div>
-          <div className="space-y-3">
-            {recentAchievements.map((ach, i) => (
-              <div key={i} className="flex items-center gap-3 p-2 rounded-lg bg-[rgba(17,24,50,0.5)] border border-[rgba(56,78,135,0.1)]">
-                <div className={`w-8 h-8 rounded-lg border flex items-center justify-center flex-shrink-0 ${ach.color}`}>
-                  {ach.icon}
+          {visibleActivity.length === 0 ? (
+            <p className="text-gray-500 text-xs text-center py-4">Complete topics to start earning achievements!</p>
+          ) : (
+            <div className="space-y-3">
+              {visibleActivity.map((ach, i) => (
+                <div key={i} className="flex items-center gap-3 p-2 rounded-lg bg-[rgba(17,24,50,0.5)] border border-[rgba(56,78,135,0.1)]">
+                  <div className="w-8 h-8 rounded-lg border flex items-center justify-center flex-shrink-0 bg-cyan-500/10 border-cyan-500/30 text-cyan-400">
+                    🏆
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-white text-xs font-semibold leading-tight">{ach.title}</p>
+                    <p className="text-gray-500 text-[10px] mt-0.5 leading-tight">{ach.description}</p>
+                  </div>
+                  <span className="text-gray-500 text-[10px] whitespace-nowrap">{formatRelativeDate(ach.earnedAt)}</span>
                 </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-white text-xs font-semibold leading-tight">{ach.title}</p>
-                  <p className="text-green-400 text-[10px] font-bold mt-0.5">{ach.xp}</p>
-                </div>
-                <span className="text-gray-500 text-[10px] whitespace-nowrap">{ach.time}</span>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Streak Calendar */}
@@ -169,41 +270,49 @@ export default function AchievementsView() {
           <div className="flex items-center justify-between mb-3">
             <div>
               <h3 className="text-white font-bold text-base">Streak Calendar</h3>
-              <p className="text-gray-500 text-xs">12 days</p>
+              <p className="text-gray-500 text-xs">{streak.currentStreak} {streak.currentStreak === 1 ? 'day' : 'days'}</p>
             </div>
             <span className="text-orange-400 text-xs font-bold">🔥</span>
           </div>
-          <p className="text-gray-400 text-xs mb-3">You've studied 12 days in a row. Keep it going!</p>
+          <p className="text-gray-400 text-xs mb-3">
+            {streak.currentStreak > 0 ? `You've studied ${streak.currentStreak} days in a row. Keep it going!` : 'Study today to start a streak!'}
+          </p>
           <div className="grid grid-cols-7 gap-1 text-center">
-            {streakDays.map((day, i) => (
-              <div key={i} className="text-[10px] text-gray-500 mb-1">{day}</div>
+            {streak.days.map((d) => (
+              <div key={`label-${d.date}`} className="text-[10px] text-gray-500 mb-1">{d.label}</div>
             ))}
-            {streakCompleted.map((done, i) => (
-              <div key={i} className={`w-6 h-6 mx-auto rounded-full flex items-center justify-center text-[10px] font-bold ${done ? 'bg-green-500 text-white' : i === 6 ? 'border border-cyan-400 text-cyan-400' : 'bg-[rgba(56,78,135,0.3)] text-gray-600'}`}>
-                {done ? '✓' : i === 6 ? '12' : ''}
+            {streak.days.map((d) => (
+              <div key={d.date} className={`w-6 h-6 mx-auto rounded-full flex items-center justify-center text-[10px] font-bold ${d.active ? 'bg-green-500 text-white' : 'bg-[rgba(56,78,135,0.3)] text-gray-600'}`}>
+                {d.active ? '✓' : ''}
               </div>
             ))}
           </div>
-          <p className="text-orange-400 text-xs mt-3">Longest streak: 12 days</p>
+          <p className="text-orange-400 text-xs mt-3">Longest streak: {longestStreak} {longestStreak === 1 ? 'day' : 'days'}</p>
         </div>
 
         {/* Your Next Achievement */}
         <div className="glass-card p-5">
           <h3 className="text-white font-bold text-base mb-3">Your Next Achievement</h3>
-          <div className="flex items-start gap-3">
-            <div className="w-12 h-12 rounded-full bg-slate-700/60 border border-slate-600 flex items-center justify-center text-2xl flex-shrink-0">
-              🛡️
-            </div>
-            <div className="flex-1">
-              <p className="text-white font-semibold text-sm">Exam Ready</p>
-              <p className="text-gray-500 text-xs">Complete 5 past papers</p>
-              <div className="mt-2 h-1.5 bg-[rgba(56,78,135,0.25)] rounded-full overflow-hidden">
-                <div className="h-full bg-gradient-to-r from-blue-500 to-cyan-400" style={{ width: '60%' }} />
+          {nextBadge ? (
+            <div className="flex items-start gap-3">
+              <div className="w-12 h-12 rounded-full bg-slate-700/60 border border-slate-600 flex items-center justify-center text-2xl flex-shrink-0">
+                {nextBadge.def.icon ?? '🛡️'}
               </div>
-              <p className="text-gray-500 text-[10px] mt-1">3 / 5</p>
-              <button className="mt-3 text-xs font-bold text-cyan-400 hover:text-cyan-300">View Past Papers →</button>
+              <div className="flex-1">
+                <p className="text-white font-semibold text-sm">{nextBadge.def.name}</p>
+                <p className="text-gray-500 text-xs">{nextBadge.def.desc}</p>
+                <div className="mt-2 h-1.5 bg-[rgba(56,78,135,0.25)] rounded-full overflow-hidden">
+                  <div className="h-full bg-gradient-to-r from-blue-500 to-cyan-400" style={{ width: `${nextBadge.percent}%` }} />
+                </div>
+                <p className="text-gray-500 text-[10px] mt-1">{nextBadge.label}</p>
+                <button onClick={() => navigate(nextBadge.def.ctaRoute)} className="mt-3 text-xs font-bold text-cyan-400 hover:text-cyan-300">
+                  {nextBadge.def.ctaLabel} →
+                </button>
+              </div>
             </div>
-          </div>
+          ) : (
+            <p className="text-gray-400 text-sm">You've earned every badge. Amazing work! 🎉</p>
+          )}
         </div>
 
       </div>
