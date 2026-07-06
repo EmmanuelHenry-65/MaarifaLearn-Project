@@ -54,6 +54,36 @@ export interface SubjectSummary {
   lastAccessedAt: string | null;
 }
 
+export interface ProfileInfo {
+  fullName: string;
+  email: string;
+  grade: string | null;
+  avatarUrl: string | null;
+}
+
+/** Real profile fields for display in the header/sidebar (name, grade, avatar). */
+export async function getProfile(userId: string): Promise<ProfileInfo | null> {
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('full_name, email, grade, avatar_url')
+    .eq('id', userId)
+    .maybeSingle();
+  if (error) throw error;
+  if (!data) return null;
+
+  return {
+    fullName: data.full_name,
+    email: data.email,
+    grade: data.grade,
+    avatarUrl: data.avatar_url,
+  };
+}
+
+export async function updateGrade(userId: string, grade: string): Promise<void> {
+  const { error } = await supabase.from('profiles').update({ grade }).eq('id', userId);
+  if (error) throw error;
+}
+
 /** Ensures a profiles row exists for this user without clobbering existing fields. */
 export async function ensureProfile(user: User): Promise<void> {
   const { error } = await supabase.from('profiles').upsert(
@@ -293,7 +323,26 @@ export function computeLongestStreak(topics: LearningTopic[]): number {
   return longest;
 }
 
-const XP_PER_COMPLETED_TOPIC = 50;
+export interface LevelInfo {
+  level: number;
+  xp: number;
+  currentLevelFloor: number;
+  nextLevelThreshold: number;
+  percent: number;
+}
+
+const XP_PER_LEVEL = 500;
+
+/** Simple RPG-style level curve derived purely from real XP (500 XP per level). */
+export function getLevelInfo(xp: number): LevelInfo {
+  const level = Math.floor(xp / XP_PER_LEVEL) + 1;
+  const currentLevelFloor = (level - 1) * XP_PER_LEVEL;
+  const nextLevelThreshold = level * XP_PER_LEVEL;
+  const percent = Math.round(((xp - currentLevelFloor) / XP_PER_LEVEL) * 100);
+  return { level, xp, currentLevelFloor, nextLevelThreshold, percent };
+}
+
+export const XP_PER_COMPLETED_TOPIC = 50;
 
 /** Aggregate stats over the trailing week/month, derived entirely from real progress rows. */
 export function computePerformanceStats(topics: LearningTopic[], period: 'week' | 'month'): PerformanceStats {

@@ -1,5 +1,6 @@
 import { supabase } from '../lib/supabase';
 import type { LearningTopic } from './learning.service';
+import { createNotification } from './notifications.service';
 
 export interface AchievementContext {
   completedCount: number;
@@ -192,7 +193,19 @@ export const MILESTONE_DEFINITIONS: MilestoneDefinition[] = [
 
 /** Awards any badge whose conditions are newly met. Safe to call every page load - already-earned badges are no-ops. */
 export async function syncEarnedBadges(userId: string, ctx: AchievementContext): Promise<void> {
-  const newlyEarned = BADGE_DEFINITIONS.filter((badge) => badge.check(ctx));
+  const eligible = BADGE_DEFINITIONS.filter((badge) => badge.check(ctx));
+  if (eligible.length === 0) return;
+
+  const { data: existing, error: fetchError } = await supabase
+    .from('achievements')
+    .select('title')
+    .eq('profile_id', userId)
+    .in('title', eligible.map((badge) => badge.name))
+    .returns<{ title: string }[]>();
+  if (fetchError) throw fetchError;
+
+  const existingTitles = new Set((existing ?? []).map((row) => row.title));
+  const newlyEarned = eligible.filter((badge) => !existingTitles.has(badge.name));
   if (newlyEarned.length === 0) return;
 
   const rows = newlyEarned.map((badge) => ({
@@ -206,6 +219,12 @@ export async function syncEarnedBadges(userId: string, ctx: AchievementContext):
     .from('achievements')
     .upsert(rows, { onConflict: 'profile_id,title', ignoreDuplicates: true });
   if (error) throw error;
+
+  await Promise.all(
+    newlyEarned.map((badge) =>
+      createNotification(userId, `New badge earned: ${badge.name}`, badge.desc, 'achievement').catch(() => {}),
+    ),
+  );
 }
 
 export async function getEarnedAchievements(userId: string): Promise<EarnedAchievement[]> {
