@@ -1,12 +1,20 @@
+import { useMemo } from 'react';
 import { useTheme } from '../context/ThemeContext';
+import type { LearningTopic } from '../services/learning.service';
 
-const missions = [
-  { text: 'Complete 1 lesson', done: true, icon: '📗' },
-  { text: 'Score 80%+ in a quiz', done: false, icon: '📊' },
-  { text: 'Ask the AI tutor a question', done: false, icon: '🤖' },
-];
+function isToday(iso: string | null): boolean {
+  if (!iso) return false;
+  const date = new Date(iso);
+  const now = new Date();
+  return date.getFullYear() === now.getFullYear() && date.getMonth() === now.getMonth() && date.getDate() === now.getDate();
+}
 
-export default function TodaysMission() {
+interface TodaysMissionProps {
+  topics: LearningTopic[];
+  askedAiToday: boolean;
+}
+
+export default function TodaysMission({ topics, askedAiToday }: TodaysMissionProps) {
   const { theme } = useTheme();
   const titleColor = theme === 'light' ? 'text-slate-900' : 'text-white';
   const textColor = theme === 'light' ? 'text-slate-700' : 'text-gray-300';
@@ -14,6 +22,18 @@ export default function TodaysMission() {
   const missionBg = theme === 'light' ? 'bg-slate-50 border-slate-200' : 'bg-[rgba(17,24,50,0.5)] border-[rgba(56,78,135,0.15)]';
   const missionBorder = theme === 'light' ? 'border-slate-200' : 'border-[rgba(56,78,135,0.2)]';
   const uncheckedBorder = theme === 'light' ? 'border-slate-300' : 'border-[rgba(56,78,135,0.4)]';
+
+  const missions = useMemo(() => {
+    const studiedToday = topics.some((t) => isToday(t.lastAccessedAt));
+    const completedToday = topics.some((t) => t.completed && isToday(t.lastAccessedAt));
+    return [
+      { text: 'Study a topic today', done: studiedToday, icon: '📗' },
+      { text: 'Complete a topic today', done: completedToday, icon: '📊' },
+      { text: 'Ask the AI tutor a question', done: askedAiToday, icon: '🤖' },
+    ];
+  }, [topics, askedAiToday]);
+
+  const allDone = missions.every((m) => m.done);
 
   return (
     <div className="glass-card p-5 flex flex-col h-full">
@@ -50,7 +70,7 @@ export default function TodaysMission() {
           <span className="text-lg">🎁</span>
           <span className={`text-sm font-medium ${textColor}`}>Reward</span>
         </div>
-        <span className="text-green-500 font-bold text-sm">+50 XP</span>
+        <span className={`font-bold text-sm ${allDone ? 'text-green-500' : 'text-gray-500'}`}>{allDone ? '+50 XP earned!' : '+50 XP'}</span>
       </div>
     </div>
   );

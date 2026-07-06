@@ -1,27 +1,78 @@
-const nodes = [
-  { name: 'Cell Structure', completed: true },
-  { name: 'Levels of\nOrganization', completed: true },
-  { name: 'Photosynthesis', current: true, completed: true },
-  { name: 'Respiration', locked: true },
-  { name: 'Genetics', locked: true },
-];
+import { useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { aggregateSubjects, type LearningTopic } from '../services/learning.service';
 
-export default function LearningJourney() {
+interface LearningJourneyProps {
+  topics: LearningTopic[];
+}
+
+export default function LearningJourney({ topics }: LearningJourneyProps) {
+  const navigate = useNavigate();
+
+  const focusSubjectCode = useMemo(() => {
+    const subjects = aggregateSubjects(topics);
+    if (subjects.length === 0) return null;
+    const touched = [...subjects].filter((s) => s.lastAccessedAt).sort((a, b) => new Date(b.lastAccessedAt as string).getTime() - new Date(a.lastAccessedAt as string).getTime());
+    return (touched[0] ?? subjects[0]).code;
+  }, [topics]);
+
+  const { nodes, subjectName } = useMemo(() => {
+    if (!focusSubjectCode) return { nodes: [], subjectName: '' };
+
+    const subjectTopics = topics.filter((t) => t.subjectCode === focusSubjectCode);
+    const byLesson = new Map<string, { title: string; order: number; topics: LearningTopic[] }>();
+    for (const t of subjectTopics) {
+      const entry = byLesson.get(t.lessonId) ?? { title: t.lessonTitle, order: t.lessonOrder, topics: [] };
+      entry.topics.push(t);
+      byLesson.set(t.lessonId, entry);
+    }
+
+    const lessons = Array.from(byLesson.values()).sort((a, b) => a.order - b.order).slice(0, 5);
+    const firstIncompleteIndex = lessons.findIndex((lesson) => !lesson.topics.every((t) => t.completed));
+
+    const nodes = lessons.map((lesson, i) => ({
+      name: lesson.title,
+      completed: lesson.topics.every((t) => t.completed),
+      current: i === firstIncompleteIndex,
+      locked: firstIncompleteIndex !== -1 && i > firstIncompleteIndex,
+    }));
+
+    return { nodes, subjectName: subjectTopics[0]?.subjectName ?? '' };
+  }, [topics, focusSubjectCode]);
+
+  const completedCount = nodes.filter((n) => n.completed).length;
+  const connectorWidth = nodes.length > 1 ? (completedCount / (nodes.length - 1)) * 100 : 0;
+
+  if (nodes.length === 0) {
+    return (
+      <div className="glass-card p-5 h-full flex flex-col items-center justify-center text-center">
+        <h3 className="text-white font-bold text-base mb-2">Learning Journey</h3>
+        <p className="text-gray-500 text-sm">Start a lesson to see your journey here.</p>
+      </div>
+    );
+  }
+
   return (
     <div className="glass-card p-5 h-full flex flex-col">
       <div className="flex items-center justify-between mb-5">
-        <h3 className="text-white font-bold text-base">Learning Journey</h3>
-        <button className="text-cyan-400 text-xs font-medium hover:text-cyan-300 transition-colors">View full map</button>
+        <div>
+          <h3 className="text-white font-bold text-base">Learning Journey</h3>
+          <p className="text-gray-500 text-[11px] mt-0.5">{subjectName}</p>
+        </div>
+        <button onClick={() => navigate(`/subjects/${focusSubjectCode}`)} className="text-cyan-400 text-xs font-medium hover:text-cyan-300 transition-colors">View full map</button>
       </div>
       <div className="flex-1 flex items-center">
         <div className="flex items-start justify-between w-full relative">
-          {/* Connector line background */}
           <div className="absolute top-5 left-[10%] right-[10%] h-[2px] bg-[rgba(56,78,135,0.3)]" />
-          {/* Completed portion of connector */}
-          <div className="absolute top-5 left-[10%] h-[2px] bg-gradient-to-r from-green-500 to-cyan-500" style={{ width: '50%' }} />
-          
+          <div className="absolute top-5 left-[10%] h-[2px] bg-gradient-to-r from-green-500 to-cyan-500" style={{ width: `${connectorWidth * 0.8}%` }} />
+
           {nodes.map((node, i) => (
-            <div key={i} className="flex flex-col items-center relative z-10" style={{ width: '20%' }}>
+            <button
+              key={i}
+              onClick={() => navigate(`/workspace/${focusSubjectCode}`)}
+              className="flex flex-col items-center relative z-10"
+              style={{ width: `${100 / nodes.length}%` }}
+            >
               <div
                 className={`w-10 h-10 rounded-full flex items-center justify-center ${
                   node.current
@@ -47,7 +98,7 @@ export default function LearningJourney() {
               }`}>
                 {node.name}
               </span>
-            </div>
+            </button>
           ))}
         </div>
       </div>

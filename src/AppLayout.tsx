@@ -1,11 +1,14 @@
+import { useEffect, useState } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import Sidebar from './components/Sidebar';
 import TopNav from './components/TopNav';
 import { useTheme } from './context/ThemeContext';
+import { useAuth } from './context/AuthContext';
+import { getProfile } from './services/learning.service';
 import { usePreferencesSync } from './hooks/usePreferencesSync';
 
 const routeToTitle: Record<string, { title: string; subtitle: string }> = {
-  '/': { title: 'Good morning, Emmanuel! 👋', subtitle: '"Every day is a step closer to your goals."' },
+  '/': { title: 'Welcome back! 👋', subtitle: '"Every day is a step closer to your goals."' },
   '/my-learning': { title: 'My Learning', subtitle: 'Track your progress and continue your learning journey.' },
   '/subjects': { title: 'Subjects', subtitle: 'Explore all subjects in the CBC curriculum. Track your progress and master every topic.' },
   '/ai-tutor': { title: 'AI Tutor', subtitle: 'Your intelligent learning companion. Ask anything, learn anything.' },
@@ -32,17 +35,41 @@ const pathToLabel: Record<string, string> = {
   '/workspace': 'My Learning',
 };
 
+function timeOfDayGreeting(): string {
+  const hour = new Date().getHours();
+  if (hour < 12) return 'Good morning';
+  if (hour < 18) return 'Good afternoon';
+  return 'Good evening';
+}
+
 export default function AppLayout() {
   const location = useLocation();
   const { theme } = useTheme();
+  const { user } = useAuth();
+  const [firstName, setFirstName] = useState<string | null>(null);
+
   // Loads the signed-in user's saved theme from their account once per session.
   usePreferencesSync();
+
+  useEffect(() => {
+    if (!user) return;
+    let cancelled = false;
+    getProfile(user.id)
+      .then((profile) => {
+        if (!cancelled && profile) setFirstName(profile.fullName.split(' ')[0]);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [user]);
 
   // For subject detail pages like /subjects/mathematics, treat as Subjects
   const isSubjectDetail = location.pathname.startsWith('/subjects/');
   const isWorkspace = location.pathname.startsWith('/workspace');
   const key = isSubjectDetail ? '/subjects' : isWorkspace ? '/workspace' : location.pathname;
   const meta = routeToTitle[key] || routeToTitle['/'];
+  const title = key === '/' ? `${timeOfDayGreeting()}${firstName ? `, ${firstName}` : ''}! 👋` : meta.title;
 
   const activeTab = pathToLabel[key] || 'Dashboard';
 
@@ -55,7 +82,7 @@ export default function AppLayout() {
       <Sidebar activeTab={activeTab} />
 
       <div className="flex-1 ml-[200px] relative z-10 flex flex-col p-6 overflow-hidden min-w-0">
-        <TopNav title={meta.title} subtitle={meta.subtitle} />
+        <TopNav title={title} subtitle={meta.subtitle} />
         <div key={location.pathname} className="page-transition flex-1 min-h-0">
           <Outlet />
         </div>
