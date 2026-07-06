@@ -4,6 +4,7 @@ import ThemeToggle from './ThemeToggle';
 interface TopNavProps {
   title: string;
   subtitle: string;
+  onMenuClick: () => void;
 }
 
 function getPageIcon(title: string) {
@@ -72,25 +73,37 @@ function getPageIcon(title: string) {
   return null;
 }
 
-export default function TopNav({ title, subtitle }: TopNavProps) {
+export default function TopNav({ title, subtitle, onMenuClick }: TopNavProps) {
   const { theme } = useTheme();
 
   return (
-    <header className="flex items-center justify-between mb-5 gap-4 min-w-0 w-full transition-colors duration-300">
-      <div className="min-w-0 flex items-center gap-3">
-        {getPageIcon(title)}
+    <header className="flex items-center justify-between mb-5 gap-3 min-w-0 w-full flex-wrap transition-colors duration-300">
+      <div className="min-w-0 flex items-center gap-2.5 sm:gap-3">
+        <button
+          type="button"
+          onClick={onMenuClick}
+          aria-label="Open menu"
+          className={`lg:hidden flex-shrink-0 p-2 rounded-xl border transition-all ${theme === 'light' ? 'bg-white border-slate-200 text-slate-600' : 'bg-[rgba(17,24,50,0.8)] border-[rgba(56,78,135,0.3)] text-gray-300'}`}
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+            <line x1="3" y1="6" x2="21" y2="6" />
+            <line x1="3" y1="12" x2="21" y2="12" />
+            <line x1="3" y1="18" x2="21" y2="18" />
+          </svg>
+        </button>
+        <div className="hidden sm:block">{getPageIcon(title)}</div>
         <div className="min-w-0">
-          <h1 className={`text-3xl font-extrabold flex items-center gap-3 leading-none tracking-tight whitespace-nowrap transition-colors ${theme === 'light' ? 'text-slate-900' : 'text-white'}`}>
+          <h1 className={`text-xl sm:text-2xl lg:text-3xl font-extrabold flex items-center gap-3 leading-tight tracking-tight truncate transition-colors ${theme === 'light' ? 'text-slate-900' : 'text-white'}`}>
             {title}
           </h1>
-          <p className={`text-sm mt-2 whitespace-nowrap transition-colors ${theme === 'light' ? 'text-slate-500' : 'text-gray-400'}`}>{subtitle}</p>
+          <p className={`text-xs sm:text-sm mt-1 sm:mt-2 truncate transition-colors ${theme === 'light' ? 'text-slate-500' : 'text-gray-400'}`}>{subtitle}</p>
         </div>
       </div>
-      <div className="flex items-center gap-3 flex-shrink-0">
+      <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
         <ThemeToggle />
-        
+
         {/* Country Selector */}
-        <button className={`flex items-center gap-2 px-3.5 py-2 rounded-xl border text-sm transition-all ${theme === 'light' ? 'bg-white border-slate-200 text-slate-700 hover:border-slate-300 shadow-sm' : 'bg-[rgba(17,24,50,0.8)] border-[rgba(56,78,135,0.3)] text-gray-200 hover:border-[rgba(56,78,135,0.5)]'}`}>
+        <button className={`hidden md:flex items-center gap-2 px-3.5 py-2 rounded-xl border text-sm transition-all ${theme === 'light' ? 'bg-white border-slate-200 text-slate-700 hover:border-slate-300 shadow-sm' : 'bg-[rgba(17,24,50,0.8)] border-[rgba(56,78,135,0.3)] text-gray-200 hover:border-[rgba(56,78,135,0.5)]'}`}>
           <span className="flex items-center justify-center w-5 h-4 rounded-[3px] overflow-hidden relative text-[8px] font-bold text-white" style={{ background: 'linear-gradient(180deg, #000 0 33%, #b91c1c 33% 66%, #16a34a 66% 100%)' }}>
             <span className="relative z-10 drop-shadow-[0_1px_1px_rgba(0,0,0,0.8)]">KE</span>
           </span>
@@ -100,7 +113,7 @@ export default function TopNav({ title, subtitle }: TopNavProps) {
           </svg>
         </button>
         {/* Grade Selector */}
-        <button className={`flex items-center gap-2 px-3.5 py-2 rounded-xl border text-sm transition-all ${theme === 'light' ? 'bg-white border-slate-200 text-slate-700 hover:border-slate-300 shadow-sm' : 'bg-[rgba(17,24,50,0.8)] border-[rgba(56,78,135,0.3)] text-gray-200 hover:border-[rgba(56,78,135,0.5)]'}`}>
+        <button className={`hidden lg:flex items-center gap-2 px-3.5 py-2 rounded-xl border text-sm transition-all ${theme === 'light' ? 'bg-white border-slate-200 text-slate-700 hover:border-slate-300 shadow-sm' : 'bg-[rgba(17,24,50,0.8)] border-[rgba(56,78,135,0.3)] text-gray-200 hover:border-[rgba(56,78,135,0.5)]'}`}>
           <span>Grade 10</span>
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-gray-500">
             <polyline points="6,9 12,15 18,9" />
@@ -115,7 +128,7 @@ export default function TopNav({ title, subtitle }: TopNavProps) {
           <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-cyan-400 rounded-full shadow-[0_0_6px_rgba(34,211,238,0.8)]" />
         </button>
         {/* Profile */}
-        <button className={`flex items-center gap-2.5 pl-2 pr-3 py-1.5 rounded-xl border transition-all ${theme === 'light' ? 'bg-white border-slate-200 shadow-sm hover:border-slate-300' : 'bg-[rgba(17,24,50,0.8)] border-[rgba(56,78,135,0.3)] hover:border-[rgba(56,78,135,0.5)]'}`}>
+        <button className={`flex items-center gap-2.5 pl-2 pr-2 sm:pr-3 py-1.5 rounded-xl border transition-all ${theme === 'light' ? 'bg-white border-slate-200 shadow-sm hover:border-slate-300' : 'bg-[rgba(17,24,50,0.8)] border-[rgba(56,78,135,0.3)] hover:border-[rgba(56,78,135,0.5)]'}`}>
           <div className={`w-9 h-9 rounded-full overflow-hidden flex-shrink-0 ring-1 ${theme === 'light' ? 'ring-slate-200' : 'ring-[rgba(56,78,135,0.4)]'}`}>
             <img
               src="/images/avatar-emmanuel.jpg"
@@ -123,11 +136,11 @@ export default function TopNav({ title, subtitle }: TopNavProps) {
               className="w-full h-full object-cover"
             />
           </div>
-          <div className="text-left">
+          <div className="text-left hidden sm:block">
             <p className={`text-sm font-semibold leading-tight ${theme === 'light' ? 'text-slate-800' : 'text-white'}`}>Emmanuel</p>
             <p className="text-gray-500 text-[11px] leading-tight">Learner</p>
           </div>
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-gray-500 ml-1">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-gray-500 ml-1 hidden sm:block">
             <polyline points="6,9 12,15 18,9" />
           </svg>
         </button>
