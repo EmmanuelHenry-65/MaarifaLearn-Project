@@ -5,6 +5,7 @@ import TopNav from './components/TopNav';
 import { useTheme } from './context/ThemeContext';
 import { useAuth } from './context/AuthContext';
 import { getProfile } from './services/learning.service';
+import { usePreferencesSync } from './hooks/usePreferencesSync';
 
 const routeToTitle: Record<string, { title: string; subtitle: string }> = {
   '/': { title: 'Welcome back! 👋', subtitle: '"Every day is a step closer to your goals."' },
@@ -46,6 +47,9 @@ export default function AppLayout() {
   const { theme } = useTheme();
   const { user } = useAuth();
   const [firstName, setFirstName] = useState<string | null>(null);
+
+  // Loads the signed-in user's saved theme from their account once per session.
+  usePreferencesSync();
 
   useEffect(() => {
     if (!user) return;
