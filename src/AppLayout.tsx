@@ -2,6 +2,7 @@ import { Outlet, useLocation } from 'react-router-dom';
 import Sidebar from './components/Sidebar';
 import TopNav from './components/TopNav';
 import { useTheme } from './context/ThemeContext';
+import { usePreferencesSync } from './hooks/usePreferencesSync';
 
 const routeToTitle: Record<string, { title: string; subtitle: string }> = {
   '/': { title: 'Good morning, Emmanuel! 👋', subtitle: '"Every day is a step closer to your goals."' },
@@ -34,6 +35,8 @@ const pathToLabel: Record<string, string> = {
 export default function AppLayout() {
   const location = useLocation();
   const { theme } = useTheme();
+  // Loads the signed-in user's saved theme from their account once per session.
+  usePreferencesSync();
 
   // For subject detail pages like /subjects/mathematics, treat as Subjects
   const isSubjectDetail = location.pathname.startsWith('/subjects/');
