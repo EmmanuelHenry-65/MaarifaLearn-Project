@@ -95,7 +95,8 @@ export default function MyLearningView() {
     return () => {
       cancelled = true;
     };
-  }, [user]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id]);
 
   useEffect(() => {
     if (!user) return;
@@ -114,7 +115,8 @@ export default function MyLearningView() {
     return () => {
       cancelled = true;
     };
-  }, [user, currentMonth]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id, currentMonth]);
 
   const continueLearning = useMemo(
     () =>

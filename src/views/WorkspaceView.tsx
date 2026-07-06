@@ -41,7 +41,8 @@ export default function WorkspaceView() {
   useEffect(() => {
     if (!user || !activeTopic) return;
     touchTopicAccess(user.id, activeTopic.id).catch(() => {});
-  }, [user, activeTopic]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id, activeTopic?.id]);
 
   const isUnknownSubject = Boolean(subjectId && !subject);
   const progress = useMemo(() => Math.min(100, (subject?.progress ?? 0) + progressBump), [progressBump, subject?.progress]);
