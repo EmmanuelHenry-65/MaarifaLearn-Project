@@ -1,53 +1,31 @@
 -- =============================================================================
 -- MAARIFA LEARN DATABASE
--- FILE: 15_my_learning_dynamic.sql
+-- FILE: 16_my_learning_dynamic.sql
 --
 -- Backs the /my-learning page with real data:
---   1. Auto-create a profiles row on signup (progress/bookmarks FK to profiles)
---   2. Add exact-match slugs to lessons/topics so they can be joined against
+--   1. Add exact-match slugs to lessons/topics so they can be joined against
 --      the static curriculum IDs used by src/data/workspaceData.ts
---   3. Seed the 9 subjects/lessons/topics from workspaceData.ts
---   4. Let bookmarks target a topic directly (previously resource_id only)
---   5. Add the RLS policies progress/bookmarks were missing (0 policies today
+--   2. Seed the 9 subjects/lessons/topics from workspaceData.ts
+--   3. Let bookmarks target a topic directly (previously resource_id only)
+--   4. Add the RLS policies progress/bookmarks were missing (0 policies today
 --      means those tables are currently unusable by any client role)
---   6. Enable + expose subjects/lessons/topics for authenticated read
+--   5. Enable + expose subjects/lessons/topics for authenticated read
+--
+-- Profile auto-creation on signup lives in 15_triggers.sql, not here.
 --
 -- Safe to re-run: every step is idempotent (ON CONFLICT / IF NOT EXISTS / DROP
 -- POLICY IF EXISTS).
 -- =============================================================================
 
 -- -----------------------------------------------------------------------------
--- 1. Auto-create profiles on signup
--- -----------------------------------------------------------------------------
-
-CREATE OR REPLACE FUNCTION public.handle_new_user()
-RETURNS TRIGGER AS $$
-BEGIN
-    INSERT INTO public.profiles (id, full_name, email)
-    VALUES (
-        NEW.id,
-        COALESCE(NEW.raw_user_meta_data ->> 'full_name', split_part(NEW.email, '@', 1)),
-        NEW.email
-    )
-    ON CONFLICT (id) DO NOTHING;
-    RETURN NEW;
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
-
-DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
-CREATE TRIGGER on_auth_user_created
-    AFTER INSERT ON auth.users
-    FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
-
--- -----------------------------------------------------------------------------
--- 2. Slugs for exact-match joins with the static Workspace curriculum
+-- 1. Slugs for exact-match joins with the static Workspace curriculum
 -- -----------------------------------------------------------------------------
 
 ALTER TABLE lessons ADD COLUMN IF NOT EXISTS slug TEXT UNIQUE;
 ALTER TABLE topics ADD COLUMN IF NOT EXISTS slug TEXT UNIQUE;
 
 -- -----------------------------------------------------------------------------
--- 3. Seed curriculum (subjects -> lessons -> topics)
+-- 2. Seed curriculum (subjects -> lessons -> topics)
 -- -----------------------------------------------------------------------------
 
 INSERT INTO subjects (name, code, description) VALUES
@@ -176,7 +154,7 @@ JOIN lessons l ON l.slug = t.lesson_slug
 ON CONFLICT (slug) DO NOTHING;
 
 -- -----------------------------------------------------------------------------
--- 4. Let bookmarks target a topic directly (My Learning bookmarks topics, not
+-- 3. Let bookmarks target a topic directly (My Learning bookmarks topics, not
 --    library resources)
 -- -----------------------------------------------------------------------------
 
@@ -191,7 +169,7 @@ ALTER TABLE bookmarks DROP CONSTRAINT IF EXISTS bookmarks_profile_id_topic_id_ke
 ALTER TABLE bookmarks ADD CONSTRAINT bookmarks_profile_id_topic_id_key UNIQUE (profile_id, topic_id);
 
 -- -----------------------------------------------------------------------------
--- 5. RLS policies progress/bookmarks were missing entirely (RLS was enabled
+-- 4. RLS policies progress/bookmarks were missing entirely (RLS was enabled
 --    with zero policies, which blocks all access for every client role)
 -- -----------------------------------------------------------------------------
 
@@ -210,7 +188,7 @@ USING (auth.uid() = profile_id)
 WITH CHECK (auth.uid() = profile_id);
 
 -- -----------------------------------------------------------------------------
--- 6. Curriculum tables: enable RLS, expose read-only to authenticated users
+-- 5. Curriculum tables: enable RLS, expose read-only to authenticated users
 --    (previously had no RLS at all, i.e. unrestricted)
 -- -----------------------------------------------------------------------------
 
