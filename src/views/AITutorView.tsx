@@ -1,4 +1,17 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useAuth } from '../context/AuthContext';
+import { askTutor, getRecentConversations, countQuestionsToday, type TutorConversation } from '../services/aiTutor.service';
+
+function formatConversationTime(iso: string): string {
+  const date = new Date(iso);
+  const now = new Date();
+  const time = date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+  if (date.toDateString() === now.toDateString()) return `Today, ${time}`;
+  const yesterday = new Date(now);
+  yesterday.setDate(yesterday.getDate() - 1);
+  if (date.toDateString() === yesterday.toDateString()) return `Yesterday, ${time}`;
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
 
 const tryAsking = [
   'Explain photosynthesis',
@@ -72,54 +85,7 @@ const quickActions = [
   },
 ];
 
-const recentConversations = [
-  {
-    question: 'Explain the process of photosyntisis in plants.',
-    answer: 'Photosynthesis is the process used by green plants to make their own food...',
-    time: 'Today, 10:24 AM',
-    tag: 'Biology',
-    tagColor: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/25',
-    iconColor: 'bg-cyan-500/15 border-cyan-500/25 text-cyan-400',
-  },
-  {
-    question: 'Solve: 2x² + 5x − 3 = 0 using factorization method.',
-    answer: 'To solve 2x² + 5x − 3 = 0, we factorize the quadratic equation...',
-    time: 'Yesterday, 4:15 PM',
-    tag: 'Mathematics',
-    tagColor: 'bg-blue-500/15 text-blue-400 border-blue-500/25',
-    iconColor: 'bg-purple-500/15 border-purple-500/25 text-purple-400',
-  },
-  {
-    question: 'Give me a summary of the Kenyan independence.',
-    answer: 'Kenya gained independence on December 12, 1963 after years of struggle...',
-    time: 'Yesterday, 1:02 PM',
-    tag: 'History',
-    tagColor: 'bg-cyan-500/15 text-cyan-400 border-cyan-500/25',
-    iconColor: 'bg-cyan-500/15 border-cyan-500/25 text-cyan-400',
-  },
-  {
-    question: 'What are the main types of chemical bonds?',
-    answer: 'The main types of chemical bonds are ionic, covalent and metallic bonds...',
-    time: 'May 30, 2026',
-    tag: 'Chemistry',
-    tagColor: 'bg-orange-500/15 text-orange-400 border-orange-500/25',
-    iconColor: 'bg-orange-500/15 border-orange-500/25 text-orange-400',
-  },
-];
-
-const insights = [
-  {
-    icon: '📈',
-    iconBg: 'bg-green-500/15 border-green-500/25',
-    bold: 'You asked 8 questions today.',
-    rest: 'Keep it up! Curiosity leads to mastery.',
-  },
-  {
-    icon: '🎯',
-    iconBg: 'bg-purple-500/15 border-purple-500/25',
-    bold: 'Your top subject today is Biology.',
-    rest: 'You spent 42% of your study time here.',
-  },
+const staticInsights = [
   {
     icon: '💡',
     iconBg: 'bg-orange-500/15 border-orange-500/25',
@@ -136,7 +102,49 @@ const popularQuestions = [
 ];
 
 export default function AITutorView() {
+  const { user } = useAuth();
   const [question, setQuestion] = useState('');
+  const [conversations, setConversations] = useState<TutorConversation[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [sending, setSending] = useState(false);
+
+  useEffect(() => {
+    if (!user) return;
+    let cancelled = false;
+    setLoading(true);
+    setLoadError(null);
+    getRecentConversations()
+      .then((data) => {
+        if (!cancelled) setConversations(data);
+      })
+      .catch((err) => {
+        if (!cancelled) setLoadError(err instanceof Error ? err.message : 'Failed to load your conversations.');
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.id]);
+
+  async function handleAsk() {
+    const trimmed = question.trim();
+    if (!trimmed || !user || sending) return;
+    setSending(true);
+    try {
+      const created = await askTutor(user.id, trimmed);
+      setConversations((prev) => [created, ...prev]);
+      setQuestion('');
+    } catch (err) {
+      setLoadError(err instanceof Error ? err.message : 'Failed to send your question.');
+    } finally {
+      setSending(false);
+    }
+  }
+
+  const questionsToday = countQuestionsToday(conversations);
 
   return (
     <div className="flex gap-6 mt-2 flex-1 min-h-0">
@@ -150,9 +158,16 @@ export default function AITutorView() {
             <textarea
               value={question}
               onChange={(e) => setQuestion(e.target.value.slice(0, 1000))}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault();
+                  handleAsk();
+                }
+              }}
               placeholder="Type your question here..."
               rows={2}
-              className="w-full bg-transparent text-gray-300 text-sm placeholder-gray-600 focus:outline-none resize-none"
+              disabled={sending}
+              className="w-full bg-transparent text-gray-300 text-sm placeholder-gray-600 focus:outline-none resize-none disabled:opacity-60"
             />
             <div className="flex items-center justify-between mt-2">
               <span className="text-gray-600 text-[11px]">{question.length}/1000</span>
@@ -162,7 +177,11 @@ export default function AITutorView() {
                     <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />
                   </svg>
                 </button>
-                <button className="w-10 h-8 rounded-lg bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center text-white hover:shadow-lg hover:shadow-cyan-500/25 transition-all">
+                <button
+                  onClick={handleAsk}
+                  disabled={sending || !question.trim()}
+                  className="w-10 h-8 rounded-lg bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center text-white hover:shadow-lg hover:shadow-cyan-500/25 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:shadow-none"
+                >
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
                     <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
                   </svg>
@@ -170,6 +189,7 @@ export default function AITutorView() {
               </div>
             </div>
           </div>
+          {loadError && <p className="text-red-400 text-xs mt-3">{loadError}</p>}
 
           <p className="text-gray-500 text-xs font-medium mt-4 mb-2">Try asking about:</p>
           <div className="flex flex-wrap gap-2">
@@ -215,45 +235,34 @@ export default function AITutorView() {
             <h3 className="text-white font-bold text-lg">Recent Conversations</h3>
             <button className="text-cyan-400 text-xs font-medium hover:text-cyan-300 transition-colors">View all</button>
           </div>
-          <div className="space-y-2.5">
-            {recentConversations.map((conv, i) => (
-              <div key={i} className="flex items-center justify-between p-3 rounded-xl bg-[rgba(17,24,50,0.5)] border border-[rgba(56,78,135,0.15)] hover:border-[rgba(56,78,135,0.3)] transition-all cursor-pointer">
-                <div className="flex items-center gap-3 flex-1 min-w-0">
-                  <div className={`w-8 h-8 rounded-lg border flex items-center justify-center flex-shrink-0 ${conv.iconColor}`}>
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-                    </svg>
+          {loading ? (
+            <p className="text-gray-500 text-xs text-center py-6">Loading your conversations...</p>
+          ) : conversations.length === 0 ? (
+            <p className="text-gray-500 text-xs text-center py-6">
+              No conversations yet — ask your first question above to get started.
+            </p>
+          ) : (
+            <div className="space-y-2.5">
+              {conversations.map((conv) => (
+                <div key={conv.id} className="flex items-center justify-between p-3 rounded-xl bg-[rgba(17,24,50,0.5)] border border-[rgba(56,78,135,0.15)] hover:border-[rgba(56,78,135,0.3)] transition-all">
+                  <div className="flex items-center gap-3 flex-1 min-w-0">
+                    <div className="w-8 h-8 rounded-lg border flex items-center justify-center flex-shrink-0 bg-cyan-500/15 border-cyan-500/25 text-cyan-400">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                      </svg>
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-white text-sm font-semibold leading-tight truncate">{conv.question}</p>
+                      <p className="text-gray-500 text-[11px] leading-tight mt-0.5 truncate">{conv.answer}</p>
+                    </div>
                   </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-white text-sm font-semibold leading-tight truncate">{conv.question}</p>
-                    <p className="text-gray-500 text-[11px] leading-tight mt-0.5 truncate">{conv.answer}</p>
+                  <div className="flex items-center gap-4 flex-shrink-0 ml-4">
+                    <span className="text-gray-500 text-[11px] whitespace-nowrap">{formatConversationTime(conv.createdAt)}</span>
                   </div>
                 </div>
-                <div className="flex items-center gap-4 flex-shrink-0 ml-4">
-                  <span className="text-gray-500 text-[11px] whitespace-nowrap">{conv.time}</span>
-                  <span className={`px-2 py-0.5 rounded-full border text-[10px] font-semibold whitespace-nowrap ${conv.tagColor}`}>
-                    {conv.tag}
-                  </span>
-                  <button className="text-gray-500 hover:text-gray-300 transition-colors">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-                      <circle cx="12" cy="5" r="1.6" />
-                      <circle cx="12" cy="12" r="1.6" />
-                      <circle cx="12" cy="19" r="1.6" />
-                    </svg>
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-          <div className="flex justify-center mt-4 pt-3 border-t border-[rgba(56,78,135,0.15)]">
-            <button className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[rgba(17,24,50,0.6)] border border-[rgba(56,78,135,0.25)] text-gray-300 text-xs font-semibold hover:border-cyan-500/30 hover:text-cyan-400 transition-all">
-              New Conversation
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                <line x1="12" y1="5" x2="12" y2="19" />
-                <line x1="5" y1="12" x2="19" y2="12" />
-              </svg>
-            </button>
-          </div>
+              ))}
+            </div>
+          )}
         </div>
 
       </div>
@@ -273,7 +282,18 @@ export default function AITutorView() {
             <h3 className="text-white font-bold text-base">Today's AI Insights</h3>
           </div>
           <div className="space-y-2.5">
-            {insights.map((ins, i) => (
+            <div className="flex items-start gap-3 p-3 rounded-xl bg-[rgba(17,24,50,0.5)] border border-[rgba(56,78,135,0.15)]">
+              <div className="w-8 h-8 rounded-lg border flex items-center justify-center text-sm flex-shrink-0 bg-green-500/15 border-green-500/25">
+                📈
+              </div>
+              <p className="text-gray-400 text-[11px] leading-relaxed">
+                <span className="text-white font-semibold">
+                  You asked {questionsToday} question{questionsToday === 1 ? '' : 's'} today.
+                </span>{' '}
+                Keep it up! Curiosity leads to mastery.
+              </p>
+            </div>
+            {staticInsights.map((ins, i) => (
               <div key={i} className="flex items-start gap-3 p-3 rounded-xl bg-[rgba(17,24,50,0.5)] border border-[rgba(56,78,135,0.15)]">
                 <div className={`w-8 h-8 rounded-lg border flex items-center justify-center text-sm flex-shrink-0 ${ins.iconBg}`}>
                   {ins.icon}
@@ -285,9 +305,6 @@ export default function AITutorView() {
               </div>
             ))}
           </div>
-          <button className="w-full text-center text-cyan-400 hover:text-cyan-300 text-xs font-bold mt-4 py-2 rounded-lg bg-[rgba(17,24,50,0.5)] border border-[rgba(56,78,135,0.2)] hover:border-cyan-500/30 transition-all">
-            View All Insights
-          </button>
         </div>
 
         {/* Upload & Ask */}
