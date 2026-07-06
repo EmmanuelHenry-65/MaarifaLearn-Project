@@ -1,6 +1,10 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import AppLayout from './AppLayout';
 import { ThemeProvider } from './context/ThemeContext';
+import ProtectedRoute from './components/ProtectedRoute';
+import LoginPage from './pages/LoginPage';
+import SignupPage from './pages/SignupPage';
+import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import DashboardPage from './pages/DashboardPage';
 import MyLearningPage from './pages/MyLearningPage';
 import SubjectsPage from './pages/SubjectsPage';
@@ -19,7 +23,16 @@ export default function App() {
     <ThemeProvider>
       <BrowserRouter>
         <Routes>
-          <Route element={<AppLayout />}>
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/signup" element={<SignupPage />} />
+          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+          <Route
+            element={
+              <ProtectedRoute>
+                <AppLayout />
+              </ProtectedRoute>
+            }
+          >
             <Route path="/" element={<DashboardPage />} />
             <Route path="/my-learning" element={<MyLearningPage />} />
             <Route path="/subjects" element={<SubjectsPage />} />

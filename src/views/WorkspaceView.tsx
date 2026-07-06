@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { Navigate, useParams } from 'react-router-dom';
 import { getDefaultLesson, getDefaultTopic, getWorkspaceSubject } from '../data/workspaceData';
 import type { WorkspaceLesson, WorkspaceMode, WorkspaceTopic } from '../data/workspaceData';
+import { useAuth } from '../context/AuthContext';
+import { touchTopicAccess, recordTopicProgress } from '../services/learning.service';
 import AISidePanel from '../components/workspace/AISidePanel';
 import FloatingAIButton from '../components/workspace/FloatingAIButton';
 import LessonContent from '../components/workspace/LessonContent';
@@ -13,6 +15,7 @@ import WorkspaceHeader from '../components/workspace/WorkspaceHeader';
 export default function WorkspaceView() {
   const { subjectId } = useParams();
   const subject = getWorkspaceSubject(subjectId);
+  const { user } = useAuth();
   const [collapsed, setCollapsed] = useState(() => localStorage.getItem('workspace-sidebar-collapsed') === 'true');
   const [activeMode, setActiveMode] = useState<WorkspaceMode>('overview');
   const [activeLesson, setActiveLesson] = useState<WorkspaceLesson | undefined>(undefined);
@@ -34,6 +37,11 @@ export default function WorkspaceView() {
     setActiveTool(subject.tools[0] ?? 'Workspace tool');
     setActiveMode(subjectId ? 'lesson' : 'overview');
   }, [subject, subjectId]);
+
+  useEffect(() => {
+    if (!user || !activeTopic) return;
+    touchTopicAccess(user.id, activeTopic.id).catch(() => {});
+  }, [user, activeTopic]);
 
   const isUnknownSubject = Boolean(subjectId && !subject);
   const progress = useMemo(() => Math.min(100, (subject?.progress ?? 0) + progressBump), [progressBump, subject?.progress]);
@@ -73,7 +81,12 @@ export default function WorkspaceView() {
             activeLesson={activeLesson}
             activeTopic={activeTopic}
             progressBump={progressBump}
-            onProgressBump={() => setProgressBump((value) => Math.min(18, value + 2))}
+            onProgressBump={() => {
+              setProgressBump((value) => Math.min(18, value + 2));
+              if (user && activeTopic) {
+                recordTopicProgress(user.id, activeTopic.id, 15).catch(() => {});
+              }
+            }}
           />
         </main>
       </div>
