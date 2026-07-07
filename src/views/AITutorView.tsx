@@ -143,7 +143,10 @@ export default function AITutorView() {
     setLoadError(null);
     getRecentConversations()
       .then((data) => {
-        if (!cancelled) setConversations(data);
+        // getRecentConversations fetches newest-first (needed for the LIMIT
+        // to keep the most recent N) - reverse to chronological order for
+        // the thread view, since new messages get appended at the end.
+        if (!cancelled) setConversations([...data].reverse());
       })
       .catch((err) => {
         if (!cancelled) setLoadError(err instanceof Error ? err.message : 'Failed to load your conversations.');
