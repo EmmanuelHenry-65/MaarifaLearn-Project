@@ -10,13 +10,15 @@ export default function FormAlert({ type, message }: FormAlertProps) {
   return (
     <div
       role="alert"
-      className={`flex items-center gap-2 px-4 py-3 rounded-lg text-sm font-medium border ${
+      className={`flex items-center gap-2.5 px-4 py-3 rounded-xl text-sm font-medium border transition-all ${
         isSuccess
           ? 'bg-green-500/10 border-green-500/30 text-green-500'
           : 'bg-red-500/10 border-red-500/30 text-red-500'
       }`}
     >
-      <span>{isSuccess ? '✅' : '⚠️'}</span>
+      <span className={`flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-xs ${isSuccess ? 'bg-green-500/20' : 'bg-red-500/20'}`}>
+        {isSuccess ? '✅' : '⚠️'}
+      </span>
       <span>{message}</span>
     </div>
   );

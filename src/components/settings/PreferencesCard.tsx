@@ -21,9 +21,11 @@ export default function PreferencesCard() {
   const [saving, setSaving] = useState(false);
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
-  const sectionBg = theme === 'light' ? 'bg-slate-50 border-slate-200' : 'bg-[rgba(17,24,50,0.42)] border-[rgba(56,78,135,0.18)]';
+  const cardBg = theme === 'light' ? 'bg-white border-slate-200 shadow-sm' : 'bg-[rgba(17,24,50,0.42)] border-[rgba(56,78,135,0.18)]';
   const textColor = theme === 'light' ? 'text-slate-900' : 'text-white';
   const labelColor = theme === 'light' ? 'text-slate-500' : 'text-gray-500';
+  const iconBg = theme === 'light' ? 'bg-cyan-50 border-cyan-100' : 'bg-cyan-500/10 border-cyan-500/20';
+  const rowBorder = theme === 'light' ? 'border-slate-100' : 'border-[rgba(56,78,135,0.15)]';
 
   // Loads the preferences saved against this account so they persist across
   // logout/login and across devices, not just via localStorage.
@@ -87,17 +89,20 @@ export default function PreferencesCard() {
 
   if (loading || !draft) {
     return (
-      <div className={`rounded-xl border p-5 ${sectionBg}`}>
+      <div className={`rounded-2xl border p-6 ${cardBg}`}>
         <p className={`text-sm ${labelColor}`}>Loading preferences…</p>
       </div>
     );
   }
 
   return (
-    <div className={`rounded-xl border p-5 ${sectionBg}`}>
-      <div className="mb-5">
-        <h3 className={`font-bold text-base ${textColor}`}>User Preferences</h3>
-        <p className={`${labelColor} text-xs mt-1`}>These settings are saved to your account and follow you across devices.</p>
+    <div className={`rounded-2xl border p-6 ${cardBg}`}>
+      <div className="flex items-center gap-3 mb-5">
+        <span className={`w-10 h-10 rounded-xl border flex items-center justify-center text-lg flex-shrink-0 ${iconBg}`}>⚡</span>
+        <div>
+          <h3 className={`font-bold text-base ${textColor}`}>User Preferences</h3>
+          <p className={`${labelColor} text-xs mt-0.5`}>These settings are saved to your account and follow you across devices.</p>
+        </div>
       </div>
 
       {feedback && (
@@ -106,20 +111,20 @@ export default function PreferencesCard() {
         </div>
       )}
 
-      <div className="space-y-4">
-        <PreferenceRow icon="🎨" label="Theme" description="Switch between light and dark mode.">
+      <div>
+        <PreferenceRow icon="🎨" label="Theme" description="Switch between light and dark mode." borderClass={rowBorder}>
           <div className="flex gap-2">
             {(['light', 'dark'] as const).map((option) => (
               <button
                 key={option}
                 type="button"
                 onClick={() => updateDraft('theme', option)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold border capitalize transition-colors ${
+                className={`px-3.5 py-1.5 rounded-lg text-xs font-bold border capitalize transition-all duration-200 ${
                   draft.theme === option
                     ? 'bg-cyan-600 border-cyan-600 text-white'
                     : theme === 'light'
-                      ? 'border-slate-200 text-slate-600'
-                      : 'border-[rgba(56,78,135,0.3)] text-gray-300'
+                      ? 'border-slate-200 text-slate-600 hover:border-slate-300'
+                      : 'border-[rgba(56,78,135,0.3)] text-gray-300 hover:border-[rgba(56,78,135,0.5)]'
                 }`}
               >
                 {option}
@@ -128,7 +133,7 @@ export default function PreferencesCard() {
           </div>
         </PreferenceRow>
 
-        <PreferenceRow icon="🔔" label="Study Reminders" description="Get notified to keep up with your study plan.">
+        <PreferenceRow icon="🔔" label="Study Reminders" description="Get notified to keep up with your study plan." borderClass={rowBorder}>
           <ToggleSwitch
             label="Study reminders"
             checked={draft.studyRemindersEnabled}
@@ -136,7 +141,7 @@ export default function PreferencesCard() {
           />
         </PreferenceRow>
 
-        <PreferenceRow icon="💡" label="Show Quiz Hints" description="Display helpful hints while taking quizzes.">
+        <PreferenceRow icon="💡" label="Show Quiz Hints" description="Display helpful hints while taking quizzes." borderClass={rowBorder}>
           <ToggleSwitch
             label="Show quiz hints"
             checked={draft.quizHintsEnabled}
@@ -144,7 +149,7 @@ export default function PreferencesCard() {
           />
         </PreferenceRow>
 
-        <PreferenceRow icon="▦" label="Default Learning View" description="Choose how lessons are displayed by default.">
+        <PreferenceRow icon="▦" label="Default Learning View" description="Choose how lessons are displayed by default." borderClass="" isLast>
           <div className="w-full sm:w-48">
             <SelectField
               label=""
@@ -162,7 +167,7 @@ export default function PreferencesCard() {
           type="button"
           disabled={saving || !isDirty}
           onClick={handleSave}
-          className="px-5 py-2.5 rounded-lg bg-gradient-to-r from-cyan-500 to-blue-600 text-white text-sm font-bold hover:shadow-lg hover:shadow-cyan-500/20 transition-all disabled:opacity-60"
+          className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 text-white text-sm font-bold hover:shadow-lg hover:shadow-cyan-500/20 transition-all duration-200 disabled:opacity-60"
         >
           {saving ? 'Saving…' : 'Save Changes'}
         </button>
@@ -170,7 +175,7 @@ export default function PreferencesCard() {
           type="button"
           disabled={saving || !isDirty}
           onClick={handleCancel}
-          className={`px-5 py-2.5 rounded-lg border text-sm font-bold transition-colors disabled:opacity-60 ${
+          className={`px-5 py-2.5 rounded-xl border text-sm font-bold transition-all duration-200 disabled:opacity-60 ${
             theme === 'light' ? 'border-slate-200 text-slate-600 hover:bg-slate-100' : 'border-[rgba(56,78,135,0.3)] text-gray-300 hover:bg-[rgba(56,78,135,0.1)]'
           }`}
         >
@@ -181,15 +186,29 @@ export default function PreferencesCard() {
   );
 }
 
-function PreferenceRow({ icon, label, description, children }: { icon: string; label: string; description: string; children: React.ReactNode }) {
+function PreferenceRow({
+  icon,
+  label,
+  description,
+  children,
+  borderClass,
+  isLast,
+}: {
+  icon: string;
+  label: string;
+  description: string;
+  children: React.ReactNode;
+  borderClass: string;
+  isLast?: boolean;
+}) {
   const { theme } = useTheme();
   const textColor = theme === 'light' ? 'text-slate-900' : 'text-white';
   const labelColor = theme === 'light' ? 'text-slate-500' : 'text-gray-500';
 
   return (
-    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+    <div className={`flex flex-col sm:flex-row sm:items-center justify-between gap-3 py-4 ${isLast ? '' : `border-b ${borderClass}`}`}>
       <div className="flex items-start gap-3">
-        <span className="w-8 h-8 rounded-lg border border-cyan-500/20 bg-cyan-500/10 flex items-center justify-center text-sm text-cyan-500 flex-shrink-0">
+        <span className="w-9 h-9 rounded-xl border border-cyan-500/20 bg-cyan-500/10 flex items-center justify-center text-sm text-cyan-500 flex-shrink-0">
           {icon}
         </span>
         <div>
@@ -197,7 +216,7 @@ function PreferenceRow({ icon, label, description, children }: { icon: string; l
           <p className={`text-xs ${labelColor}`}>{description}</p>
         </div>
       </div>
-      <div className="sm:flex-shrink-0">{children}</div>
+      <div className="sm:flex-shrink-0 sm:pl-12">{children}</div>
     </div>
   );
 }
