@@ -334,8 +334,8 @@ export default function AITutorView() {
                 ) : (
                   <div key={msg.id} className="flex items-start gap-2.5">
                     <BotAvatar />
-                    <div className="max-w-[75%] bg-[rgba(17,24,50,0.7)] border border-[rgba(56,78,135,0.25)] rounded-2xl rounded-tl-sm px-4 py-2.5">
-                      <p className="text-gray-300 text-sm leading-relaxed">{msg.content}</p>
+                    <div className="max-w-[75%] bg-[#1e293b] border border-[rgba(100,130,200,0.35)] rounded-2xl rounded-tl-sm px-4 py-2.5 shadow-sm">
+                      <p className="text-gray-100 text-sm leading-relaxed">{msg.content}</p>
                     </div>
                   </div>
                 ),
