@@ -22,7 +22,7 @@ const ThemeSpecificIcon = ({ theme, isActive, originalIcon }: { theme: 'dark' | 
 };
 
 const menuItems = [
-  { icon: 'home', label: 'Dashboard', path: '/' },
+  { icon: 'home', label: 'Dashboard', path: '/dashboard' },
   { icon: 'learning', label: 'My Learning', path: '/my-learning' },
   { icon: 'subjects', label: 'Subjects', path: '/subjects' },
   { icon: 'ai', label: 'AI Tutor', path: '/ai-tutor' },
