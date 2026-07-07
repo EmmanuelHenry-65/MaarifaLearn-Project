@@ -69,19 +69,12 @@ export default function AvatarUploader({ currentUrl, fullName, onUpload, onRemov
   }
 
   return (
-    <div className="flex items-center gap-5 flex-wrap">
-      <div className="relative flex-shrink-0">
-        <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full overflow-hidden flex items-center justify-center bg-gradient-to-br from-cyan-500 to-blue-600 text-white font-bold text-2xl ring-4 ring-cyan-500/10 shadow-lg shadow-cyan-500/10">
-          {displayUrl ? (
-            <img src={displayUrl} alt="Profile" className="w-full h-full object-cover" />
-          ) : (
-            getInitials(fullName)
-          )}
-        </div>
-        {busy && (
-          <div className="absolute inset-0 rounded-full bg-black/40 flex items-center justify-center text-white text-[10px] font-semibold">
-            …
-          </div>
+    <div className="flex items-center gap-4 flex-wrap">
+      <div className="w-16 h-16 rounded-full overflow-hidden flex items-center justify-center bg-cyan-600/20 border border-cyan-600/30 text-cyan-500 font-bold text-lg flex-shrink-0">
+        {displayUrl ? (
+          <img src={displayUrl} alt="Profile" className="w-full h-full object-cover" />
+        ) : (
+          getInitials(fullName)
         )}
       </div>
 
@@ -91,7 +84,7 @@ export default function AvatarUploader({ currentUrl, fullName, onUpload, onRemov
             type="button"
             disabled={busy}
             onClick={() => fileInputRef.current?.click()}
-            className="px-3.5 py-2 rounded-xl bg-purple-500/10 border border-purple-500/30 text-purple-600 text-xs font-bold hover:bg-purple-500/20 transition-all duration-200 disabled:opacity-50"
+            className="px-3 py-2 rounded-lg bg-purple-500/10 border border-purple-500/30 text-purple-600 text-xs font-bold hover:bg-purple-500/20 transition-colors disabled:opacity-50"
           >
             {busy ? 'Uploading…' : 'Change photo'}
           </button>
@@ -100,18 +93,14 @@ export default function AvatarUploader({ currentUrl, fullName, onUpload, onRemov
               type="button"
               disabled={busy}
               onClick={handleRemove}
-              className="px-3.5 py-2 rounded-xl bg-red-500/10 border border-red-500/30 text-red-500 text-xs font-bold hover:bg-red-500/20 transition-all duration-200 disabled:opacity-50"
+              className="px-3 py-2 rounded-lg bg-red-500/10 border border-red-500/30 text-red-500 text-xs font-bold hover:bg-red-500/20 transition-colors disabled:opacity-50"
             >
               Remove
             </button>
           )}
         </div>
         <p className="text-[11px] text-gray-500">PNG, JPEG, or WEBP. Max 3MB. Optional.</p>
-        {error && (
-          <p className="text-xs text-red-500 flex items-center gap-1">
-            <span>⚠</span> {error}
-          </p>
-        )}
+        {error && <p className="text-xs text-red-500">{error}</p>}
       </div>
 
       <input
