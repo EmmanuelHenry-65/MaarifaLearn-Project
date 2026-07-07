@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
+import { supabase } from '../lib/supabase';
 import { getProfile, updateGrade, type ProfileInfo } from '../services/learning.service';
 import { getNotifications, getUnreadCount, markAllRead, type AppNotification } from '../services/notifications.service';
 import ThemeToggle from './ThemeToggle';
@@ -108,6 +109,22 @@ export default function TopNav({ title, subtitle, onMenuClick }: TopNavProps) {
     if (!user) return;
     getProfile(user.id).then((p) => p && setProfile(p)).catch(() => {});
     getUnreadCount(user.id).then(setUnreadCount).catch(() => {});
+
+    // Live update: a notification created elsewhere in the same session
+    // (a study reminder, a newly-earned badge) bumps the badge instantly
+    // instead of waiting for the next page load/reload to notice it.
+    const channel = supabase
+      .channel(`notifications-${user.id}`)
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'notifications', filter: `profile_id=eq.${user.id}` },
+        () => setUnreadCount((count) => count + 1),
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [user]);
 
   function showComingSoon(message: string) {
