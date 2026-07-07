@@ -1,11 +1,31 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { workspaceSubjects } from '../data/workspaceData';
 
-const NAV_LINKS = [
-  { label: 'Home', href: '#top' },
-  { label: 'About', href: '#features' },
-  { label: 'Subjects', to: '/subjects' },
-  { label: 'Resources', to: '/resources' },
+const RESOURCE_CATEGORIES = [
+  { label: 'Past Papers & Mock Exams', desc: 'Practice with real exam-style papers', to: '/past-papers', icon: '📄' },
+  { label: 'Video Lessons', desc: 'Watch topic walkthroughs from your subjects', to: '/resources', icon: '🎥' },
+  { label: 'Notes & Worksheets', desc: 'Downloadable study notes and practice sheets', to: '/resources', icon: '📝' },
+  { label: 'Useful Links', desc: 'Curated external resources per topic', to: '/resources', icon: '🔗' },
 ];
+
+function ChevronDown({ open }: { open: boolean }) {
+  return (
+    <svg
+      width="12"
+      height="12"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={`transition-transform ${open ? 'rotate-180' : ''}`}
+    >
+      <polyline points="6 9 12 15 18 9" />
+    </svg>
+  );
+}
 
 const FEATURES = [
   {
@@ -62,6 +82,8 @@ const FEATURES = [
 ];
 
 export default function LandingPage() {
+  const [openMenu, setOpenMenu] = useState<'subjects' | 'resources' | null>(null);
+
   return (
     <div id="top" className="min-h-screen bg-[#0a0e1a] text-slate-50 overflow-x-hidden">
       {/* Nav */}
@@ -79,18 +101,74 @@ export default function LandingPage() {
         </a>
 
         <nav className="hidden md:flex items-center gap-8 text-sm font-semibold text-slate-300">
-          {NAV_LINKS.map((link) =>
-            link.to ? (
-              <Link key={link.label} to={link.to} className="hover:text-cyan-400 transition-colors">
-                {link.label}
-              </Link>
-            ) : (
-              <a key={link.label} href={link.href} className="hover:text-cyan-400 transition-colors">
-                {link.label}
-              </a>
-            ),
-          )}
+          <a href="#top" className="hover:text-cyan-400 transition-colors">
+            Home
+          </a>
+          <a href="#features" className="hover:text-cyan-400 transition-colors">
+            About
+          </a>
+
+          <div className="relative">
+            <button
+              onClick={() => setOpenMenu((m) => (m === 'subjects' ? null : 'subjects'))}
+              className={`flex items-center gap-1.5 transition-colors ${openMenu === 'subjects' ? 'text-cyan-400' : 'hover:text-cyan-400'}`}
+            >
+              Subjects
+              <ChevronDown open={openMenu === 'subjects'} />
+            </button>
+            {openMenu === 'subjects' && (
+              <div className="absolute top-full left-0 mt-3 w-72 rounded-2xl border border-white/10 bg-[#0f1528] shadow-2xl p-3 z-50">
+                <p className="px-2 pb-2 text-xs font-bold text-cyan-400 uppercase tracking-wide">
+                  {workspaceSubjects.length} Subjects Available
+                </p>
+                <div className="max-h-80 overflow-y-auto space-y-0.5">
+                  {workspaceSubjects.map((subject) => (
+                    <Link
+                      key={subject.id}
+                      to={`/subjects/${subject.id}`}
+                      onClick={() => setOpenMenu(null)}
+                      className="flex items-center gap-3 px-2 py-2 rounded-lg hover:bg-white/5 transition-colors"
+                    >
+                      <span className="text-lg">{subject.icon}</span>
+                      <span className="flex-1 text-sm font-semibold text-slate-200">{subject.name}</span>
+                      <span className="text-[10px] font-bold uppercase text-slate-500">{subject.category}</span>
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div className="relative">
+            <button
+              onClick={() => setOpenMenu((m) => (m === 'resources' ? null : 'resources'))}
+              className={`flex items-center gap-1.5 transition-colors ${openMenu === 'resources' ? 'text-cyan-400' : 'hover:text-cyan-400'}`}
+            >
+              Resources
+              <ChevronDown open={openMenu === 'resources'} />
+            </button>
+            {openMenu === 'resources' && (
+              <div className="absolute top-full left-0 mt-3 w-80 rounded-2xl border border-white/10 bg-[#0f1528] shadow-2xl p-3 z-50">
+                {RESOURCE_CATEGORIES.map((resource) => (
+                  <Link
+                    key={resource.label}
+                    to={resource.to}
+                    onClick={() => setOpenMenu(null)}
+                    className="flex items-start gap-3 px-2 py-2.5 rounded-lg hover:bg-white/5 transition-colors"
+                  >
+                    <span className="text-lg leading-none mt-0.5">{resource.icon}</span>
+                    <span>
+                      <span className="block text-sm font-semibold text-slate-200">{resource.label}</span>
+                      <span className="block text-xs text-slate-500">{resource.desc}</span>
+                    </span>
+                  </Link>
+                ))}
+              </div>
+            )}
+          </div>
         </nav>
+
+        {openMenu && <div className="fixed inset-0 z-40" onClick={() => setOpenMenu(null)} />}
 
         <div className="flex items-center gap-3">
           <Link
