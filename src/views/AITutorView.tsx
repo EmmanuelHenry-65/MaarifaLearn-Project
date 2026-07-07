@@ -317,7 +317,7 @@ export default function AITutorView() {
           </>
         ) : (
           <>
-            <div className="flex-1 overflow-y-auto space-y-3 pr-1">
+            <div className="flex-1 overflow-y-auto space-y-3 pr-1" style={{ maxHeight: 'calc(100vh - 260px)' }}>
               {allMessages.map((msg) =>
                 msg.sender === 'user' ? (
                   <div key={msg.id} className="flex justify-end">
