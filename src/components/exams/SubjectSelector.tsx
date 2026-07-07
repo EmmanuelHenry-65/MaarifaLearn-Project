@@ -1,11 +1,24 @@
-import type { ExamSubject, ExamSubjectId } from '../../data/examData';
+import type { ExamSubject } from '../../services/examinations.service';
 import { useTheme } from '../../context/ThemeContext';
 
 interface SubjectSelectorProps {
   subjects: ExamSubject[];
-  selectedSubject: ExamSubjectId;
-  onSelect: (subjectId: ExamSubjectId) => void;
+  selectedSubject: string;
+  onSelect: (subjectId: string) => void;
 }
+
+const ACCENTS: Record<string, string> = {
+  mathematics: 'from-blue-500 to-cyan-400',
+  english: 'from-indigo-500 to-blue-400',
+  kiswahili: 'from-teal-500 to-emerald-400',
+  ict: 'from-cyan-500 to-sky-500',
+  pe: 'from-indigo-500 to-purple-500',
+  csl: 'from-emerald-500 to-teal-400',
+  physics: 'from-amber-500 to-yellow-400',
+  chemistry: 'from-orange-500 to-red-400',
+  'computer-studies': 'from-sky-500 to-cyan-400',
+};
+const DEFAULT_ACCENT = 'from-slate-500 to-slate-400';
 
 export default function SubjectSelector({ subjects, selectedSubject, onSelect }: SubjectSelectorProps) {
   const { theme } = useTheme();
@@ -34,7 +47,7 @@ export default function SubjectSelector({ subjects, selectedSubject, onSelect }:
             }`}
           >
             <div className="flex items-center gap-3">
-              <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${subject.accent} flex items-center justify-center text-xl shadow-lg shadow-cyan-500/10`}>
+              <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${ACCENTS[subject.colorKey] ?? DEFAULT_ACCENT} flex items-center justify-center text-xl shadow-lg shadow-cyan-500/10`}>
                 {subject.icon}
               </div>
               <div className="min-w-0">
