@@ -23,9 +23,10 @@ export default function ChangePasswordCard() {
   const [saving, setSaving] = useState(false);
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
-  const sectionBg = theme === 'light' ? 'bg-slate-50 border-slate-200' : 'bg-[rgba(17,24,50,0.42)] border-[rgba(56,78,135,0.18)]';
+  const cardBg = theme === 'light' ? 'bg-white border-slate-200 shadow-sm' : 'bg-[rgba(17,24,50,0.42)] border-[rgba(56,78,135,0.18)]';
   const textColor = theme === 'light' ? 'text-slate-900' : 'text-white';
   const labelColor = theme === 'light' ? 'text-slate-500' : 'text-gray-500';
+  const iconBg = theme === 'light' ? 'bg-cyan-50 border-cyan-100' : 'bg-cyan-500/10 border-cyan-500/20';
 
   function updateField<K extends keyof FormState>(key: K, value: FormState[K]) {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -78,10 +79,14 @@ export default function ChangePasswordCard() {
   }
 
   return (
-    <div className={`rounded-xl border p-5 ${sectionBg}`}>
-      <div className="mb-5">
-        <h3 className={`font-bold text-base ${textColor}`}>Change Password</h3>
-        <p className={`${labelColor} text-xs mt-1`}>Choose a strong password to keep your account secure.</p>
+    <div className={`rounded-2xl border p-6 ${cardBg}`}>
+      <div className="flex items-center gap-3 mb-5">
+        <span className={`w-10 h-10 rounded-xl border flex items-center justify-center text-lg flex-shrink-0 ${iconBg}`}>🔒</span>
+        <div>
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-cyan-600">Security</p>
+          <h3 className={`font-bold text-base ${textColor}`}>Change Password</h3>
+          <p className={`${labelColor} text-xs mt-0.5`}>Choose a strong password to keep your account secure.</p>
+        </div>
       </div>
 
       {feedback && (
@@ -119,7 +124,7 @@ export default function ChangePasswordCard() {
           type="button"
           disabled={saving}
           onClick={handleSave}
-          className="px-5 py-2.5 rounded-lg bg-gradient-to-r from-cyan-500 to-blue-600 text-white text-sm font-bold hover:shadow-lg hover:shadow-cyan-500/20 transition-all disabled:opacity-60"
+          className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 text-white text-sm font-bold hover:shadow-lg hover:shadow-cyan-500/20 transition-all duration-200 disabled:opacity-60"
         >
           {saving ? 'Updating…' : 'Update Password'}
         </button>
@@ -127,7 +132,7 @@ export default function ChangePasswordCard() {
           type="button"
           disabled={saving}
           onClick={handleCancel}
-          className={`px-5 py-2.5 rounded-lg border text-sm font-bold transition-colors disabled:opacity-60 ${
+          className={`px-5 py-2.5 rounded-xl border text-sm font-bold transition-all duration-200 disabled:opacity-60 ${
             theme === 'light' ? 'border-slate-200 text-slate-600 hover:bg-slate-100' : 'border-[rgba(56,78,135,0.3)] text-gray-300 hover:bg-[rgba(56,78,135,0.1)]'
           }`}
         >
