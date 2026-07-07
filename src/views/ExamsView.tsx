@@ -1,6 +1,17 @@
-import { useMemo, useState } from 'react';
-import { examPapers, examSubjects } from '../data/examData';
-import type { ExamMode, ExamPaper, ExamQuestion, ExamSubjectId } from '../data/examData';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
+import { useExamData } from '../hooks/useExamData';
+import {
+  startAttempt,
+  submitAttempt,
+  getPaperQuestions,
+  getAttemptAnswers,
+  type ExamPaper,
+  type ExamQuestion,
+  type AttemptResult,
+  type GradedAnswer,
+} from '../services/examinations.service';
 import ExamAISidePanel from '../components/exams/ExamAISidePanel';
 import ExamCard from '../components/exams/ExamCard';
 import ExamDashboard from '../components/exams/ExamDashboard';
@@ -13,13 +24,13 @@ import SubjectSelector from '../components/exams/SubjectSelector';
 import FloatingAIButton from '../components/workspace/FloatingAIButton';
 import { useTheme } from '../context/ThemeContext';
 
+export type ExamMode = 'authentic' | 'guided';
 type ExamScreen = 'dashboard' | 'list' | 'mode-select' | 'attempt' | 'results' | 'review';
 
 const initialFilters: ExamFilterState = {
   year: 'All',
   term: 'All',
   difficulty: 'All',
-  topic: 'All',
   type: 'All',
   duration: 'All',
   status: 'All',
@@ -29,21 +40,61 @@ const initialFilters: ExamFilterState = {
 
 export default function ExamsView() {
   const { theme } = useTheme();
-  const [selectedSubject, setSelectedSubject] = useState<ExamSubjectId>('mathematics');
+  const { user } = useAuth();
+  const [searchParams] = useSearchParams();
+  const { subjects, papers, bookmarkedIds, toggleBookmark, refresh, loading } = useExamData();
+
+  const [selectedSubject, setSelectedSubject] = useState<string | null>(null);
   const [filters, setFilters] = useState(initialFilters);
   const [screen, setScreen] = useState<ExamScreen>('dashboard');
   const [activePaper, setActivePaper] = useState<ExamPaper | undefined>();
+  const [activeQuestions, setActiveQuestions] = useState<ExamQuestion[]>([]);
   const [examMode, setExamMode] = useState<ExamMode>('authentic');
+  const [attemptId, setAttemptId] = useState<string | null>(null);
+  const [attemptStartedAt, setAttemptStartedAt] = useState<number | null>(null);
+  const [attemptResult, setAttemptResult] = useState<AttemptResult | null>(null);
+  const [gradedAnswers, setGradedAnswers] = useState<GradedAnswer[]>([]);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [flags, setFlags] = useState<Record<string, boolean>>({});
   const [questionBookmarks, setQuestionBookmarks] = useState<Record<string, boolean>>({});
-  const [paperBookmarks, setPaperBookmarks] = useState<Record<string, boolean>>({});
   const [aiOpen, setAiOpen] = useState(false);
   const [currentQuestion, setCurrentQuestion] = useState<ExamQuestion | undefined>();
   const [notice, setNotice] = useState('');
 
-  const currentSubject = examSubjects.find((subject) => subject.id === selectedSubject) ?? examSubjects[0];
-  const subjectPapers = examPapers.filter((paper) => paper.subjectId === selectedSubject);
+  const appliedDeepLink = useRef(false);
+
+  // Deep-link support: /exams?subject=<id>&paper=<id> (used by Past Papers' "Start Practice" etc).
+  useEffect(() => {
+    if (appliedDeepLink.current || papers.length === 0) return;
+    const paperId = searchParams.get('paper');
+    const subjectParam = searchParams.get('subject');
+
+    const foundPaper = paperId ? papers.find((p) => p.id === paperId) : undefined;
+    if (foundPaper) {
+      appliedDeepLink.current = true;
+      setSelectedSubject(foundPaper.subjectId);
+      setActivePaper(foundPaper);
+      setScreen('mode-select');
+      getPaperQuestions(foundPaper.id)
+        .then(setActiveQuestions)
+        .catch(() => setActiveQuestions([]));
+      return;
+    }
+
+    if (subjectParam && subjects.some((s) => s.id === subjectParam)) {
+      appliedDeepLink.current = true;
+      setSelectedSubject(subjectParam);
+    }
+  }, [papers, subjects, searchParams]);
+
+  // Default to the first subject once subjects have loaded, if nothing else selected it.
+  useEffect(() => {
+    if (selectedSubject || subjects.length === 0) return;
+    setSelectedSubject(subjects[0].id);
+  }, [subjects, selectedSubject]);
+
+  const currentSubject = subjects.find((subject) => subject.id === selectedSubject) ?? subjects[0];
+  const subjectPapers = useMemo(() => papers.filter((paper) => paper.subjectId === selectedSubject), [papers, selectedSubject]);
 
   const filteredPapers = useMemo(() => {
     const filtered = subjectPapers.filter((paper) => {
@@ -51,46 +102,97 @@ export default function ExamsView() {
       const matchesYear = filters.year === 'All' || String(paper.year) === filters.year;
       const matchesTerm = filters.term === 'All' || paper.term === filters.term;
       const matchesDifficulty = filters.difficulty === 'All' || paper.difficulty === filters.difficulty;
-      const matchesTopic = filters.topic === 'All' || paper.topics.includes(filters.topic);
-      const matchesType = filters.type === 'All' || paper.type === filters.type;
-      const matchesDuration = filters.duration === 'All' || (filters.duration === 'Under 2 hours' ? paper.durationMinutes < 120 : paper.durationMinutes >= 120);
+      const matchesType = filters.type === 'All' || paper.paperType === filters.type;
+      const matchesDuration = filters.duration === 'All' || (filters.duration === 'Under 2 hours' ? (paper.durationMinutes ?? 0) < 120 : (paper.durationMinutes ?? 0) >= 120);
       const matchesStatus = filters.status === 'All' || paper.completionStatus === filters.status;
-      return matchesQuery && matchesYear && matchesTerm && matchesDifficulty && matchesTopic && matchesType && matchesDuration && matchesStatus;
+      return matchesQuery && matchesYear && matchesTerm && matchesDifficulty && matchesType && matchesDuration && matchesStatus;
     });
     return [...filtered].sort((a, b) => {
-      if (filters.sort === 'Oldest') return a.year - b.year;
+      if (filters.sort === 'Oldest') return (a.year ?? 0) - (b.year ?? 0);
       if (filters.sort === 'Most Attempted') return b.attemptCount - a.attemptCount;
-      return b.year - a.year;
+      return (b.year ?? 0) - (a.year ?? 0);
     });
   }, [filters, subjectPapers]);
 
   const textColor = theme === 'light' ? 'text-slate-900' : 'text-white';
   const mutedColor = theme === 'light' ? 'text-slate-500' : 'text-gray-400';
 
-  const startExam = (paper: ExamPaper, mode: ExamMode) => {
-    setActivePaper(paper);
-    setExamMode(mode);
-    setAnswers({});
-    setFlags({});
-    setQuestionBookmarks({});
-    setScreen('attempt');
-    setNotice(mode === 'authentic' ? 'Authentic exam mode started. AI guidance disabled.' : 'AI guided mode started. Socratic tutor is available.');
-  };
-
-  const previewPaper = (paper: ExamPaper) => {
+  const previewPaper = async (paper: ExamPaper) => {
     setActivePaper(paper);
     setScreen('mode-select');
+    try {
+      setActiveQuestions(await getPaperQuestions(paper.id));
+    } catch {
+      setActiveQuestions([]);
+    }
+  };
+
+  const startExam = async (paper: ExamPaper, mode: ExamMode) => {
+    if (!user) return;
+    try {
+      const [id, questions] = await Promise.all([
+        startAttempt(user.id, paper.id),
+        activePaper?.id === paper.id && activeQuestions.length ? Promise.resolve(activeQuestions) : getPaperQuestions(paper.id),
+      ]);
+      setAttemptId(id);
+      setActiveQuestions(questions);
+      setActivePaper(paper);
+      setExamMode(mode);
+      setAnswers({});
+      setFlags({});
+      setQuestionBookmarks({});
+      setAttemptResult(null);
+      setGradedAnswers([]);
+      setAttemptStartedAt(Date.now());
+      setScreen('attempt');
+      setNotice(mode === 'authentic' ? 'Authentic exam mode started. AI guidance disabled.' : 'AI guided mode started. Socratic tutor is available.');
+    } catch {
+      setNotice('Could not start the exam — please try again.');
+    }
+  };
+
+  const submitExam = async () => {
+    if (!attemptId) return;
+    try {
+      const result = await submitAttempt(attemptId, answers);
+      setAttemptResult(result);
+      setGradedAnswers(await getAttemptAnswers(attemptId));
+      setScreen('results');
+      refresh();
+    } catch {
+      setNotice('Could not submit the exam — please try again.');
+    }
   };
 
   const downloadPaper = (paper: ExamPaper) => {
-    setNotice(`${paper.title} download prepared. Supabase Storage integration will connect here later.`);
+    if (!paper.pdfUrl) {
+      setNotice(`${paper.title}: PDF not uploaded yet.`);
+      return;
+    }
+    setNotice(`Downloading ${paper.title}...`);
   };
 
-  const togglePaperBookmark = (paperId: string) => setPaperBookmarks((prev) => ({ ...prev, [paperId]: !prev[paperId] }));
   const toggleFlag = (questionId: string) => setFlags((prev) => ({ ...prev, [questionId]: !prev[questionId] }));
   const toggleQuestionBookmark = (questionId: string) => setQuestionBookmarks((prev) => ({ ...prev, [questionId]: !prev[questionId] }));
 
-  const progress = activePaper ? Math.round((Object.values(answers).filter(Boolean).length / activePaper.questions.length) * 100) : 0;
+  const progress = activeQuestions.length ? Math.round((Object.values(answers).filter(Boolean).length / activeQuestions.length) * 100) : 0;
+  const elapsedMinutes = attemptStartedAt ? Math.max(1, Math.round((Date.now() - attemptStartedAt) / 60000)) : 0;
+
+  if (loading && subjects.length === 0) {
+    return (
+      <div className="flex items-center justify-center flex-1 min-h-0">
+        <p className={`text-sm font-semibold ${mutedColor}`}>Loading exam center...</p>
+      </div>
+    );
+  }
+
+  if (!currentSubject) {
+    return (
+      <div className="flex items-center justify-center flex-1 min-h-0">
+        <p className={`text-sm font-semibold ${mutedColor}`}>No subjects available yet.</p>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-4 mt-2 flex-1 min-h-0">
@@ -102,7 +204,7 @@ export default function ExamsView() {
       )}
 
       {screen !== 'attempt' && screen !== 'results' && screen !== 'review' && (
-        <SubjectSelector subjects={examSubjects} selectedSubject={selectedSubject} onSelect={(id) => { setSelectedSubject(id); setScreen('list'); }} />
+        <SubjectSelector subjects={subjects} selectedSubject={currentSubject.id} onSelect={(id) => { setSelectedSubject(id); setScreen('list'); }} />
       )}
 
       {screen === 'dashboard' && (
@@ -128,10 +230,10 @@ export default function ExamsView() {
               <ExamCard
                 key={paper.id}
                 paper={paper}
-                bookmarked={Boolean(paperBookmarks[paper.id])}
+                bookmarked={bookmarkedIds.has(paper.id)}
                 onPreview={previewPaper}
                 onStart={startExam}
-                onBookmark={togglePaperBookmark}
+                onBookmark={toggleBookmark}
                 onDownload={downloadPaper}
               />
             ))}
@@ -166,9 +268,10 @@ export default function ExamsView() {
         </div>
       )}
 
-      {screen === 'attempt' && activePaper && (
+      {screen === 'attempt' && activePaper && activeQuestions.length > 0 && (
         <ExamInterface
           paper={activePaper}
+          questions={activeQuestions}
           mode={examMode}
           answers={answers}
           flags={flags}
@@ -176,18 +279,34 @@ export default function ExamsView() {
           onAnswer={(questionId, value) => setAnswers((prev) => ({ ...prev, [questionId]: value }))}
           onToggleFlag={toggleFlag}
           onToggleBookmark={toggleQuestionBookmark}
-          onSubmit={() => setScreen('results')}
+          onSubmit={submitExam}
           onOpenAI={() => setAiOpen(true)}
           onQuestionChange={setCurrentQuestion}
         />
       )}
 
-      {screen === 'results' && activePaper && (
-        <ResultsDashboard paper={activePaper} answers={answers} onReview={() => setScreen('review')} onRetry={() => startExam(activePaper, examMode)} onBack={() => setScreen('dashboard')} />
+      {screen === 'results' && activePaper && attemptResult && (
+        <ResultsDashboard
+          paper={activePaper}
+          questions={activeQuestions}
+          gradedAnswers={gradedAnswers}
+          result={attemptResult}
+          elapsedMinutes={elapsedMinutes}
+          onReview={() => setScreen('review')}
+          onRetry={() => startExam(activePaper, examMode)}
+          onBack={() => setScreen('dashboard')}
+        />
       )}
 
       {screen === 'review' && activePaper && (
-        <ReviewPanel paper={activePaper} answers={answers} onBackToResults={() => setScreen('results')} onGenerateSimilar={() => setNotice('Similar question generated and added to practice recommendations.')} />
+        <ReviewPanel
+          paper={activePaper}
+          questions={activeQuestions}
+          answers={answers}
+          gradedAnswers={gradedAnswers}
+          onBackToResults={() => setScreen('results')}
+          onGenerateSimilar={() => setNotice('Similar question generated and added to practice recommendations.')}
+        />
       )}
 
       <FloatingAIButton isOpen={aiOpen} onClick={() => setAiOpen((value) => !value)} />

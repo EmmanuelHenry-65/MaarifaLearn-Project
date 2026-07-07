@@ -1,35 +1,41 @@
-import type { ExamPaper } from '../../data/examData';
+import type { ExamPaper, ExamQuestion, AttemptResult, GradedAnswer } from '../../services/examinations.service';
 import { useTheme } from '../../context/ThemeContext';
 
 interface ResultsDashboardProps {
   paper: ExamPaper;
-  answers: Record<string, string>;
+  questions: ExamQuestion[];
+  gradedAnswers: GradedAnswer[];
+  result: AttemptResult;
+  elapsedMinutes: number;
   onReview: () => void;
   onRetry: () => void;
   onBack: () => void;
 }
 
-export default function ResultsDashboard({ paper, answers, onReview, onRetry, onBack }: ResultsDashboardProps) {
+export default function ResultsDashboard({ paper, questions, gradedAnswers, result, elapsedMinutes, onReview, onRetry, onBack }: ResultsDashboardProps) {
   const { theme } = useTheme();
   const textColor = theme === 'light' ? 'text-slate-900' : 'text-white';
   const mutedColor = theme === 'light' ? 'text-slate-500' : 'text-gray-400';
   const cardBg = theme === 'light' ? 'bg-white border-slate-200 shadow-sm' : 'bg-[rgba(17,24,50,0.6)] border-[rgba(56,78,135,0.2)]';
   const innerCardBg = theme === 'light' ? 'bg-slate-50 border-slate-200' : 'bg-[rgba(17,24,50,0.4)] border-[rgba(56,78,135,0.15)]';
 
-  const answered = paper.questions.filter((question) => answers[question.id]?.trim()).length;
-  const correct = Math.max(1, Math.round(answered * 0.72)); // Mock calculation
-  const incorrect = Math.max(0, answered - correct);
-  const score = Math.min(100, Math.round((correct / paper.questions.length) * 100));
-  const grade = score >= 80 ? 'A' : score >= 70 ? 'B' : score >= 60 ? 'C' : score >= 50 ? 'D' : 'E';
+  const answersByQuestion = new Map(gradedAnswers.map((a) => [a.questionId, a]));
+  const autoGraded = gradedAnswers.filter((a) => a.isCorrect !== null);
+  const correct = autoGraded.filter((a) => a.isCorrect).length;
+  const incorrect = autoGraded.length - correct;
+  const pendingReview = gradedAnswers.filter((a) => a.isCorrect === null).length;
+  const score = Math.round(result.percentage);
+  const grade = result.grade;
   const radius = 40;
   const circumference = 2 * Math.PI * radius;
   const strokeDashoffset = circumference - (score / 100) * circumference;
+  const timePerQuestion = questions.length ? (elapsedMinutes / questions.length).toFixed(1) : '0.0';
 
   return (
     <div className="flex gap-6 mt-2 flex-1 min-h-0">
       {/* Main Content */}
       <div className="flex-1 min-w-0 space-y-4 overflow-y-auto pr-1">
-        
+
         {/* Header Card */}
         <div className={`${cardBg} rounded-2xl p-6 flex items-center justify-between`}>
           <div>
@@ -37,7 +43,7 @@ export default function ResultsDashboard({ paper, answers, onReview, onRetry, on
               Exam Completed
             </span>
             <h2 className={`text-2xl font-extrabold mt-3 ${textColor}`}>{paper.title}</h2>
-            <p className={`${mutedColor} text-sm mt-1`}>You completed this examination in {paper.durationMinutes - 15}m.</p>
+            <p className={`${mutedColor} text-sm mt-1`}>You completed this examination in {elapsedMinutes}m.</p>
             <div className="flex items-center gap-3 mt-5">
               <button onClick={onReview} className="px-5 py-2.5 rounded-xl bg-cyan-500 text-white text-sm font-bold hover:bg-cyan-400 transition-colors shadow-lg shadow-cyan-500/20">
                 Smart Review
@@ -47,7 +53,7 @@ export default function ResultsDashboard({ paper, answers, onReview, onRetry, on
               </button>
             </div>
           </div>
-          
+
           <div className="flex items-center gap-8">
             <div className="text-center">
               <p className="text-5xl font-extrabold text-white">{grade}</p>
@@ -68,25 +74,28 @@ export default function ResultsDashboard({ paper, answers, onReview, onRetry, on
 
         {/* Analytics Row */}
         <div className="grid grid-cols-5 gap-4">
-          {/* Topic Breakdown */}
+          {/* Question Breakdown */}
           <div className={`${cardBg} rounded-2xl p-5 col-span-3`}>
-            <h3 className={`font-bold text-base mb-5 ${textColor}`}>Topic Breakdown</h3>
-            <div className="space-y-5">
-              {[
-                { topic: 'Algebra', value: 85 },
-                { topic: 'Trigonometry', value: 40 },
-                { topic: 'Statistics', value: 100 }
-              ].map((item) => (
-                <div key={item.topic}>
-                  <div className="flex justify-between text-xs mb-2">
-                    <span className={`font-semibold ${textColor}`}>{item.topic}</span>
-                    <span className={`font-bold ${item.value < 50 ? 'text-red-500' : 'text-green-500'}`}>{item.value}%</span>
+            <h3 className={`font-bold text-base mb-5 ${textColor}`}>Question Breakdown</h3>
+            <div className="space-y-3">
+              {questions.map((q, i) => {
+                const graded = answersByQuestion.get(q.id);
+                const label = graded?.isCorrect === true ? 'Correct' : graded?.isCorrect === false ? 'Incorrect' : 'Pending review';
+                const color = graded?.isCorrect === true ? 'text-green-500' : graded?.isCorrect === false ? 'text-red-500' : 'text-amber-500';
+                const barColor = graded?.isCorrect === true ? 'bg-green-500' : graded?.isCorrect === false ? 'bg-red-500' : 'bg-amber-500';
+                const width = graded ? (graded.isCorrect === null ? 50 : graded.isCorrect ? 100 : 0) : 0;
+                return (
+                  <div key={q.id}>
+                    <div className="flex justify-between text-xs mb-1">
+                      <span className={`font-semibold ${textColor}`}>Question {i + 1} ({q.marks} marks)</span>
+                      <span className={`font-bold ${color}`}>{label}</span>
+                    </div>
+                    <div className="h-2 rounded-full bg-[rgba(56,78,135,0.25)] overflow-hidden">
+                      <div className={`h-full rounded-full ${barColor}`} style={{ width: `${width}%` }} />
+                    </div>
                   </div>
-                  <div className="h-2 rounded-full bg-[rgba(56,78,135,0.25)] overflow-hidden">
-                    <div className={`h-full rounded-full ${item.value < 50 ? 'bg-red-500' : 'bg-green-500'}`} style={{ width: `${item.value}%` }} />
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
 
@@ -96,19 +105,19 @@ export default function ResultsDashboard({ paper, answers, onReview, onRetry, on
             <div className="grid grid-cols-2 gap-3">
               <div className={`${innerCardBg} rounded-xl p-4`}>
                 <p className="text-gray-500 text-[10px] font-bold uppercase mb-1">Correct Answers</p>
-                <p className="text-2xl font-extrabold text-green-400">{correct}<span className="text-sm text-gray-500 font-normal">/{paper.questions.length}</span></p>
+                <p className="text-2xl font-extrabold text-green-400">{correct}<span className="text-sm text-gray-500 font-normal">/{autoGraded.length}</span></p>
               </div>
               <div className={`${innerCardBg} rounded-xl p-4`}>
                 <p className="text-gray-500 text-[10px] font-bold uppercase mb-1">Incorrect Answers</p>
-                <p className="text-2xl font-extrabold text-red-400">{incorrect}<span className="text-sm text-gray-500 font-normal">/{paper.questions.length}</span></p>
+                <p className="text-2xl font-extrabold text-red-400">{incorrect}<span className="text-sm text-gray-500 font-normal">/{autoGraded.length}</span></p>
               </div>
               <div className={`${innerCardBg} rounded-xl p-4`}>
                 <p className="text-gray-500 text-[10px] font-bold uppercase mb-1">Time Per Question</p>
-                <p className="text-2xl font-extrabold text-white">3.2<span className="text-sm text-gray-500 font-normal">m</span></p>
+                <p className="text-2xl font-extrabold text-white">{timePerQuestion}<span className="text-sm text-gray-500 font-normal">m</span></p>
               </div>
               <div className={`${innerCardBg} rounded-xl p-4`}>
-                <p className="text-gray-500 text-[10px] font-bold uppercase mb-1">Percentile Rank</p>
-                <p className="text-2xl font-extrabold text-white">Top 15%</p>
+                <p className="text-gray-500 text-[10px] font-bold uppercase mb-1">Pending Review</p>
+                <p className="text-2xl font-extrabold text-white">{pendingReview}<span className="text-sm text-gray-500 font-normal"> questions</span></p>
               </div>
             </div>
           </div>
@@ -117,7 +126,7 @@ export default function ResultsDashboard({ paper, answers, onReview, onRetry, on
 
       {/* Right Sidebar */}
       <div className="w-[300px] flex-shrink-0 space-y-4 overflow-y-auto pb-6">
-        
+
         {/* AI Revision Plan */}
         <div className={`${cardBg} rounded-2xl p-5`}>
           <div className="flex items-center gap-2 mb-3">
@@ -125,30 +134,24 @@ export default function ResultsDashboard({ paper, answers, onReview, onRetry, on
             <h3 className={`font-bold text-base ${textColor}`}>AI Revision Plan</h3>
           </div>
           <p className={`${mutedColor} text-xs leading-relaxed mb-4`}>
-            Based on your mock performance, you should focus on Geometry and Trigonometry. I have prepared a personalized study plan for you.
+            {incorrect > 0
+              ? `You got ${incorrect} of ${autoGraded.length} auto-graded questions wrong. Retry this paper to reinforce ${paper.subjectName}, or ask the AI Tutor about the questions you missed.`
+              : `Strong work on ${paper.subjectName}. Retry this paper anytime to keep it fresh, or move on to another paper.`}
           </p>
           <button onClick={onRetry} className="w-full py-2.5 rounded-xl bg-cyan-500 text-white text-xs font-bold hover:bg-cyan-400 transition-colors shadow-lg shadow-cyan-500/20">
-            Start AI Revision
+            Retry This Paper
           </button>
         </div>
 
-        {/* Recommended Lessons */}
-        <div className={`${cardBg} rounded-2xl p-5`}>
-          <h3 className={`font-bold text-base mb-4 ${textColor}`}>Recommended Lessons</h3>
-          <div className="space-y-3">
-            {[
-              { title: 'Trigonometric Ratios', icon: '▶', color: 'text-purple-400 border-purple-500/30 bg-purple-500/10' },
-              { title: 'Completing the Square', icon: '▶', color: 'text-blue-400 border-blue-500/30 bg-blue-500/10' }
-            ].map((lesson) => (
-              <div key={lesson.title} className={`flex items-center gap-3 p-3 rounded-xl border ${innerCardBg} hover:border-cyan-500/30 transition-all cursor-pointer`}>
-                <div className={`w-8 h-8 rounded-lg flex items-center justify-center border ${lesson.color}`}>
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><polygon points="5,3 19,12 5,21" /></svg>
-                </div>
-                <p className={`text-xs font-semibold ${textColor}`}>{lesson.title}</p>
-              </div>
-            ))}
+        {/* Pending Review Notice */}
+        {pendingReview > 0 && (
+          <div className={`${cardBg} rounded-2xl p-5`}>
+            <h3 className={`font-bold text-base mb-2 ${textColor}`}>Pending Review</h3>
+            <p className={`${mutedColor} text-xs leading-relaxed`}>
+              {pendingReview} short-answer/essay {pendingReview === 1 ? 'question' : 'questions'} on this paper {pendingReview === 1 ? 'is' : 'are'} not auto-graded. Open Smart Review to compare your answer against the marking scheme.
+            </p>
           </div>
-        </div>
+        )}
 
       </div>
     </div>

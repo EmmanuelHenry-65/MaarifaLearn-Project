@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
-import type { ExamMode, ExamPaper, ExamQuestion } from '../../data/examData';
+import type { ExamPaper, ExamQuestion } from '../../services/examinations.service';
+import type { ExamMode } from '../../views/ExamsView';
 import { useTheme } from '../../context/ThemeContext';
 
 interface ExamInterfaceProps {
   paper: ExamPaper;
+  questions: ExamQuestion[];
   mode: ExamMode;
   answers: Record<string, string>;
   flags: Record<string, boolean>;
@@ -16,16 +18,16 @@ interface ExamInterfaceProps {
   onQuestionChange: (question: ExamQuestion) => void;
 }
 
-export default function ExamInterface({ paper, mode, answers, flags, bookmarks, onAnswer, onToggleFlag, onToggleBookmark, onSubmit, onOpenAI, onQuestionChange }: ExamInterfaceProps) {
+export default function ExamInterface({ paper, questions, mode, answers, flags, bookmarks, onAnswer, onToggleFlag, onToggleBookmark, onSubmit, onOpenAI, onQuestionChange }: ExamInterfaceProps) {
   const { theme } = useTheme();
   const [index, setIndex] = useState(0);
-  const [remaining, setRemaining] = useState(paper.durationMinutes * 60);
+  const [remaining, setRemaining] = useState((paper.durationMinutes ?? 60) * 60);
   const [paused, setPaused] = useState(false);
   const [tool, setTool] = useState<string | null>(null);
 
-  const question = paper.questions[index];
-  const answeredCount = paper.questions.filter((item) => answers[item.id]?.trim()).length;
-  const progress = Math.round((answeredCount / paper.questions.length) * 100);
+  const question = questions[index];
+  const answeredCount = questions.filter((item) => answers[item.id]?.trim()).length;
+  const progress = Math.round((answeredCount / questions.length) * 100);
   const textColor = theme === 'light' ? 'text-slate-900' : 'text-white';
   const mutedColor = theme === 'light' ? 'text-slate-500' : 'text-gray-400';
   const panelBg = theme === 'light' ? 'bg-white border-slate-200 shadow-sm' : 'bg-[rgba(17,24,50,0.55)] border-[rgba(56,78,135,0.18)]';
@@ -47,7 +49,7 @@ export default function ExamInterface({ paper, mode, answers, flags, bookmarks, 
   const seconds = (remaining % 60).toString().padStart(2, '0');
   const urgent = remaining < 300;
 
-  const tools = useMemo(() => getToolsForPaper(paper.subjectId), [paper.subjectId]);
+  const tools = useMemo(() => getToolsForPaper(paper.subjectCode), [paper.subjectCode]);
 
   return (
     <div className="flex gap-4 flex-1 min-h-0">
@@ -63,13 +65,13 @@ export default function ExamInterface({ paper, mode, answers, flags, bookmarks, 
           <div className="mt-3 h-2 rounded-full bg-slate-200 overflow-hidden">
             <div className="h-full rounded-full bg-gradient-to-r from-cyan-500 to-blue-500" style={{ width: `${progress}%` }} />
           </div>
-          <p className={`mt-2 text-xs ${mutedColor}`}>{answeredCount}/{paper.questions.length} answered</p>
+          <p className={`mt-2 text-xs ${mutedColor}`}>{answeredCount}/{questions.length} answered</p>
         </div>
 
         <div className="glass-card p-4">
           <p className={`font-bold text-sm mb-3 ${textColor}`}>Question Navigator</p>
           <div className="grid grid-cols-5 gap-2">
-            {paper.questions.map((item, itemIndex) => (
+            {questions.map((item, itemIndex) => (
               <button
                 key={item.id}
                 onClick={() => setIndex(itemIndex)}
@@ -97,8 +99,7 @@ export default function ExamInterface({ paper, mode, answers, flags, bookmarks, 
               <div className="flex flex-wrap items-center gap-2 mb-2">
                 <span className="px-2 py-1 rounded-full bg-cyan-500/10 border border-cyan-500/20 text-cyan-600 text-[10px] font-bold">Question {index + 1}</span>
                 <span className="px-2 py-1 rounded-full bg-purple-500/10 border border-purple-500/20 text-purple-600 text-[10px] font-bold">{question.marks} marks</span>
-                <span className="px-2 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-600 text-[10px] font-bold">{question.topic}</span>
-                <span className="px-2 py-1 rounded-full bg-orange-500/10 border border-orange-500/20 text-orange-600 text-[10px] font-bold">{question.difficulty}</span>
+                <span className="px-2 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-600 text-[10px] font-bold">{paper.subjectName}</span>
               </div>
               <h2 className={`text-xl font-extrabold ${textColor}`}>{paper.title}</h2>
               <p className={`text-xs mt-1 ${mutedColor}`}>{mode === 'authentic' ? 'Authentic Examination Mode: no hints or AI guidance.' : 'AI Guided Examination: Socratic tutor available.'}</p>
@@ -117,13 +118,13 @@ export default function ExamInterface({ paper, mode, answers, flags, bookmarks, 
           <div className="flex flex-wrap gap-2 mb-3">
             {tools.map((item) => <button key={item} onClick={() => setTool(tool === item ? null : item)} className={`px-3 py-2 rounded-lg border text-xs font-bold ${tool === item ? 'bg-cyan-500 text-white border-cyan-500' : 'bg-cyan-500/10 border-cyan-500/20 text-cyan-600'}`}>{item}</button>)}
           </div>
-          {tool && <ToolContent tool={tool} subjectId={paper.subjectId} mutedColor={mutedColor} answerBg={answerBg} />}
+          {tool && <ToolContent tool={tool} subjectId={paper.subjectCode} mutedColor={mutedColor} answerBg={answerBg} />}
         </div>
 
         <div className="flex items-center justify-between pb-6">
           <button disabled={index === 0} onClick={() => setIndex((value) => Math.max(0, value - 1))} className="px-4 py-2 rounded-lg bg-slate-500/10 border border-slate-500/20 text-slate-500 text-xs font-bold disabled:opacity-40">Previous</button>
           <div className="flex gap-2">
-            <button onClick={() => setIndex((value) => Math.min(paper.questions.length - 1, value + 1))} className="px-4 py-2 rounded-lg bg-cyan-500/10 border border-cyan-500/20 text-cyan-600 text-xs font-bold">Next</button>
+            <button onClick={() => setIndex((value) => Math.min(questions.length - 1, value + 1))} className="px-4 py-2 rounded-lg bg-cyan-500/10 border border-cyan-500/20 text-cyan-600 text-xs font-bold">Next</button>
             <button onClick={onSubmit} className="px-4 py-2 rounded-lg bg-green-500 text-white text-xs font-bold">Submit Exam</button>
           </div>
         </div>
@@ -133,25 +134,38 @@ export default function ExamInterface({ paper, mode, answers, flags, bookmarks, 
 }
 
 function QuestionViewer({ question, value, onChange, answerBg, textColor, mutedColor }: { question: ExamQuestion; value: string; onChange: (value: string) => void; answerBg: string; textColor: string; mutedColor: string }) {
+  const options = [question.optionA, question.optionB, question.optionC, question.optionD].filter((o): o is string => Boolean(o));
+
   return (
     <div>
-      <p className={`text-base font-semibold leading-relaxed ${textColor}`}>{question.prompt}</p>
+      <p className={`text-base font-semibold leading-relaxed ${textColor}`}>{question.questionText}</p>
       <div className="mt-4">
-        {question.type === 'multiple-choice' && question.options ? (
+        {question.questionType === 'multiple_choice' && options.length > 0 ? (
           <div className="space-y-2">
-            {question.options.map((option) => (
-              <button key={option} onClick={() => onChange(option)} className={`w-full text-left px-4 py-3 rounded-xl border text-sm ${value === option ? 'bg-cyan-500/10 border-cyan-500/30 text-cyan-600 font-bold' : answerBg}`}>
+            {options.map((option, i) => {
+              const letter = ['a', 'b', 'c', 'd'][i];
+              return (
+                <button key={option} onClick={() => onChange(letter)} className={`w-full text-left px-4 py-3 rounded-xl border text-sm ${value === letter ? 'bg-cyan-500/10 border-cyan-500/30 text-cyan-600 font-bold' : answerBg}`}>
+                  {option}
+                </button>
+              );
+            })}
+          </div>
+        ) : question.questionType === 'true_false' ? (
+          <div className="space-y-2">
+            {['true', 'false'].map((option) => (
+              <button key={option} onClick={() => onChange(option)} className={`w-full text-left px-4 py-3 rounded-xl border text-sm capitalize ${value === option ? 'bg-cyan-500/10 border-cyan-500/30 text-cyan-600 font-bold' : answerBg}`}>
                 {option}
               </button>
             ))}
           </div>
-        ) : question.type === 'essay' ? (
+        ) : question.questionType === 'essay' ? (
           <textarea value={value} onChange={(event) => onChange(event.target.value)} className={`w-full min-h-[220px] rounded-xl border p-4 text-sm focus:outline-none focus:border-cyan-500/50 ${answerBg}`} placeholder="Write your answer here..." />
         ) : (
-          <textarea value={value} onChange={(event) => onChange(event.target.value)} className={`w-full min-h-[120px] rounded-xl border p-4 text-sm focus:outline-none focus:border-cyan-500/50 ${answerBg}`} placeholder={question.type === 'code' ? 'Write pseudocode or code here...' : 'Show your working or answer here...'} />
+          <textarea value={value} onChange={(event) => onChange(event.target.value)} className={`w-full min-h-[120px] rounded-xl border p-4 text-sm focus:outline-none focus:border-cyan-500/50 ${answerBg}`} placeholder="Show your working or answer here..." />
         )}
       </div>
-      <p className={`mt-3 text-xs ${mutedColor}`}>Question type: {question.type.replace('-', ' ')}</p>
+      <p className={`mt-3 text-xs ${mutedColor}`}>Question type: {question.questionType.replace('_', ' ')}</p>
     </div>
   );
 }

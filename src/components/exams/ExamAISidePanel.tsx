@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import type { ExamMode, ExamPaper, ExamQuestion, ExamSubject } from '../../data/examData';
+import type { ExamPaper, ExamQuestion, ExamSubject } from '../../services/examinations.service';
+import type { ExamMode } from '../../views/ExamsView';
 import { useTheme } from '../../context/ThemeContext';
 
 interface Message {
@@ -40,7 +41,7 @@ export default function ExamAISidePanel({ open, subject, paper, question, mode, 
       id: crypto.randomUUID(),
       role: 'assistant',
       content: question
-        ? `Socratic prompt: What concept do you think Question ${paper?.questions.findIndex((item) => item.id === question.id)! + 1} is testing? Look at the topic: ${question.topic}. What is the first step you can confidently take?`
+        ? `Socratic prompt: What concept do you think this question is testing? Re-read it carefully: "${question.questionText}". What is the first step you can confidently take?`
         : `Socratic prompt: Before we solve anything, what is your goal in this ${subject.name} exam session?`,
     };
     setMessages((prev) => [...prev, userMessage, assistantMessage]);

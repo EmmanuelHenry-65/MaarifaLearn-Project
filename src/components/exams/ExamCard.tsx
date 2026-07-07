@@ -1,4 +1,6 @@
-import type { ExamPaper, ExamMode } from '../../data/examData';
+import type { ExamPaper } from '../../services/examinations.service';
+import { difficultyLabel, paperTypeLabel } from '../../services/examinations.service';
+import type { ExamMode } from '../../views/ExamsView';
 import { useTheme } from '../../context/ThemeContext';
 
 interface ExamCardProps {
@@ -24,7 +26,7 @@ export default function ExamCard({ paper, bookmarked, onPreview, onStart, onBook
             <h3 className={`font-bold text-base truncate ${textColor}`}>{paper.title}</h3>
             <span className="px-2 py-0.5 rounded-full bg-green-500/10 border border-green-500/20 text-green-600 text-[10px] font-bold">{paper.year}</span>
           </div>
-          <p className={`text-xs ${mutedColor}`}>{paper.term} • {paper.type} • {paper.durationMinutes} min • {paper.totalMarks} marks • {paper.questions.length} questions</p>
+          <p className={`text-xs ${mutedColor}`}>{paper.term} • {paperTypeLabel(paper.paperType)} • {paper.durationMinutes} min • {paper.totalMarks} marks • {paper.questionCount} questions</p>
         </div>
         <span className={`px-2 py-1 rounded-full text-[10px] font-bold border ${paper.completionStatus === 'Completed' ? 'bg-green-500/10 text-green-600 border-green-500/20' : paper.completionStatus === 'In Progress' ? 'bg-cyan-500/10 text-cyan-600 border-cyan-500/20' : 'bg-purple-500/10 text-purple-600 border-purple-500/20'}`}>
           {paper.completionStatus}
@@ -32,10 +34,10 @@ export default function ExamCard({ paper, bookmarked, onPreview, onStart, onBook
       </div>
 
       <div className="grid grid-cols-4 gap-2 mt-4">
-        <Metric label="Avg Score" value={`${paper.averageScore}%`} />
+        <Metric label="Your Score" value={paper.latestScore !== null ? `${paper.latestScore}%` : '—'} />
         <Metric label="Attempts" value={String(paper.attemptCount)} />
-        <Metric label="Readiness" value={`${paper.readiness}%`} />
-        <Metric label="Difficulty" value={paper.difficulty} />
+        <Metric label="Marks" value={String(paper.totalMarks)} />
+        <Metric label="Difficulty" value={difficultyLabel(paper.difficulty)} />
       </div>
 
       <div className="flex flex-wrap gap-2 mt-4">
