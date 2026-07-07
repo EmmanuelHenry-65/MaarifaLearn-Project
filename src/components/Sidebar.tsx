@@ -100,13 +100,17 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [name, setName] = useState<string | null>(null);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
 
   useEffect(() => {
     if (!user) return;
     let cancelled = false;
     getProfile(user.id)
       .then((profile) => {
-        if (!cancelled && profile) setName(profile.fullName);
+        if (!cancelled && profile) {
+          setName(profile.fullName);
+          setAvatarUrl(profile.avatarUrl);
+        }
       })
       .catch(() => {});
     return () => {
@@ -209,8 +213,8 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
           onClick={() => navigate('/settings')}
           className={`w-full flex items-center gap-2.5 p-2 rounded-xl border transition-all ${theme === 'light' ? 'bg-white border-slate-200 shadow-sm hover:border-slate-300' : 'bg-[rgba(17,24,50,0.5)] border-[rgba(56,78,135,0.15)] hover:border-[rgba(56,78,135,0.35)]'}`}
         >
-          <div className={`w-7 h-7 rounded-full flex-shrink-0 ring-1 flex items-center justify-center text-[10px] font-bold text-white bg-gradient-to-br from-teal-400 to-blue-600 ${theme === 'light' ? 'ring-slate-200' : 'ring-[rgba(56,78,135,0.3)]'}`}>
-            {initials || '?'}
+          <div className={`w-7 h-7 rounded-full overflow-hidden flex-shrink-0 ring-1 flex items-center justify-center text-[10px] font-bold text-white bg-gradient-to-br from-teal-400 to-blue-600 ${theme === 'light' ? 'ring-slate-200' : 'ring-[rgba(56,78,135,0.3)]'}`}>
+            {avatarUrl ? <img src={avatarUrl} alt={displayName} className="w-full h-full object-cover" /> : initials || '?'}
           </div>
           <div className="text-left flex-1 min-w-0">
             <p className={`text-xs font-semibold leading-tight truncate ${theme === 'light' ? 'text-slate-800' : 'text-white'}`}>{displayName}</p>

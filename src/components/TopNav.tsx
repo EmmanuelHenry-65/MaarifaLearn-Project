@@ -277,7 +277,11 @@ export default function TopNav({ title, subtitle, onMenuClick }: TopNavProps) {
         <div className="relative">
           <button onClick={() => toggleMenu('profile')} className={`flex items-center gap-2.5 pl-2 pr-2 sm:pr-3 py-1.5 rounded-xl border transition-all ${theme === 'light' ? 'bg-white border-slate-200 shadow-sm hover:border-slate-300' : 'bg-[rgba(17,24,50,0.8)] border-[rgba(56,78,135,0.3)] hover:border-[rgba(56,78,135,0.5)]'}`}>
             <div className="w-9 h-9 rounded-full overflow-hidden flex-shrink-0 flex items-center justify-center text-xs font-bold text-white bg-gradient-to-br from-teal-400 to-blue-600">
-              {(profile?.fullName ?? user?.email ?? '?').charAt(0).toUpperCase()}
+              {profile?.avatarUrl ? (
+                <img src={profile.avatarUrl} alt={profile.fullName} className="w-full h-full object-cover" />
+              ) : (
+                (profile?.fullName ?? user?.email ?? '?').charAt(0).toUpperCase()
+              )}
             </div>
             <div className="text-left hidden sm:block">
               <p className={`text-sm font-semibold leading-tight ${theme === 'light' ? 'text-slate-800' : 'text-white'}`}>{profile?.fullName ?? 'Learner'}</p>
