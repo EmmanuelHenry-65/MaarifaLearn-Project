@@ -3,7 +3,9 @@ import { Navigate, useParams } from 'react-router-dom';
 import { getDefaultLesson, getDefaultTopic, getWorkspaceSubject } from '../data/workspaceData';
 import type { WorkspaceLesson, WorkspaceMode, WorkspaceTopic } from '../data/workspaceData';
 import { useAuth } from '../context/AuthContext';
+import { useAchievementCelebration } from '../context/AchievementCelebrationContext';
 import { touchTopicAccess, recordTopicProgress, resolveTopicId } from '../services/learning.service';
+import { checkForNewAchievements } from '../services/achievements.service';
 import AISidePanel from '../components/workspace/AISidePanel';
 import FloatingAIButton from '../components/workspace/FloatingAIButton';
 import LessonContent from '../components/workspace/LessonContent';
@@ -16,6 +18,7 @@ export default function WorkspaceView() {
   const { subjectId } = useParams();
   const subject = getWorkspaceSubject(subjectId);
   const { user } = useAuth();
+  const { celebrate } = useAchievementCelebration();
   const [collapsed, setCollapsed] = useState(() => localStorage.getItem('workspace-sidebar-collapsed') === 'true');
   const [activeMode, setActiveMode] = useState<WorkspaceMode>('overview');
   const [activeLesson, setActiveLesson] = useState<WorkspaceLesson | undefined>(undefined);
@@ -46,7 +49,12 @@ export default function WorkspaceView() {
     resolveTopicId(activeTopic.id).then((id) => {
       if (cancelled || !id) return;
       setResolvedTopicId(id);
-      touchTopicAccess(user.id, id).catch(() => {});
+      touchTopicAccess(user.id, id)
+        .then(() => checkForNewAchievements(user.id))
+        .then((newlyEarned) => {
+          if (!cancelled) celebrate(newlyEarned);
+        })
+        .catch(() => {});
     });
     return () => {
       cancelled = true;
@@ -95,7 +103,10 @@ export default function WorkspaceView() {
             onProgressBump={() => {
               setProgressBump((value) => Math.min(18, value + 2));
               if (user && resolvedTopicId) {
-                recordTopicProgress(user.id, resolvedTopicId, 15).catch(() => {});
+                recordTopicProgress(user.id, resolvedTopicId, 15)
+                  .then(() => checkForNewAchievements(user.id))
+                  .then((newlyEarned) => celebrate(newlyEarned))
+                  .catch(() => {});
               }
             }}
           />
