@@ -53,27 +53,32 @@ export class StudyPlannerError extends Error {}
 
 const TASK_COLUMNS = 'id, study_plan_id, title, subject, task_type, due_date, start_time, end_time, priority, completed';
 
-/** Every user gets one implicit study plan — the UI has no concept of multiple plans. */
+/**
+ * Every user gets one implicit study plan — the UI has no concept of
+ * multiple plans. Uses upsert on the profile_id unique constraint instead of
+ * a plain select-then-insert, so two near-simultaneous calls (e.g. an auth
+ * state change firing this effect twice with a fresh user object) can't both
+ * pass the "does one exist?" check and create duplicates.
+ */
 export async function getOrCreateDefaultPlan(userId: string): Promise<string> {
+  const { data: created, error: upsertError } = await supabase
+    .from('study_plans')
+    .upsert({ profile_id: userId, title: 'My Study Plan' }, { onConflict: 'profile_id', ignoreDuplicates: true })
+    .select('id')
+    .maybeSingle<{ id: string }>();
+
+  if (!upsertError && created) return created.id;
+
+  // ignoreDuplicates means a pre-existing row returns no data here (it was
+  // skipped, not re-selected) - fetch the row that already won the race.
   const { data: existing, error: selectError } = await supabase
     .from('study_plans')
     .select('id')
     .eq('profile_id', userId)
-    .order('created_at', { ascending: true })
-    .limit(1)
-    .maybeSingle<{ id: string }>();
-
-  if (selectError) throw new StudyPlannerError('Could not load your study plan.');
-  if (existing) return existing.id;
-
-  const { data: created, error: insertError } = await supabase
-    .from('study_plans')
-    .insert({ profile_id: userId, title: 'My Study Plan' })
-    .select('id')
     .single<{ id: string }>();
 
-  if (insertError) throw new StudyPlannerError('Could not create your study plan.');
-  return created.id;
+  if (selectError || !existing) throw new StudyPlannerError('Could not load your study plan.');
+  return existing.id;
 }
 
 /** Fetches every task with a due date inside [startDate, endDate] (inclusive, ISO dates). */
