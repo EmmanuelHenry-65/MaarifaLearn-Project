@@ -163,7 +163,7 @@ export default function TopNav({ title, subtitle, onMenuClick }: TopNavProps) {
   const buttonBase = `flex items-center gap-2 px-3.5 py-2 rounded-xl border text-sm transition-all ${theme === 'light' ? 'bg-white border-slate-200 text-slate-700 hover:border-slate-300 shadow-sm' : 'bg-[rgba(17,24,50,0.8)] border-[rgba(56,78,135,0.3)] text-gray-200 hover:border-[rgba(56,78,135,0.5)]'}`;
 
   return (
-    <header className="flex items-center justify-between mb-5 gap-3 min-w-0 w-full flex-wrap transition-colors duration-300">
+    <header className="flex items-center justify-between mb-5 gap-3 min-w-0 w-full flex-nowrap transition-colors duration-300">
       <div className="min-w-0 flex items-center gap-2.5 sm:gap-3">
         <button
           type="button"
