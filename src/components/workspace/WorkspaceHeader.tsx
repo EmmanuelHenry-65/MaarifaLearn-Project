@@ -43,7 +43,7 @@ export default function WorkspaceHeader({ subject, activeMode, query, onQueryCha
               {subject.category}
             </span>
           </div>
-          <p className={`text-xs mt-0.5 ${mutedColor}`}>{modeLabels[activeMode]} • {subject.lessonsCompleted}/{subject.totalLessons} lessons complete</p>
+          <p className={`text-xs mt-0.5 ${mutedColor}`}>{modeLabels[activeMode]} • {subject.lessonsCompleted}/{subject.totalLessons} topics complete</p>
         </div>
       </div>
 

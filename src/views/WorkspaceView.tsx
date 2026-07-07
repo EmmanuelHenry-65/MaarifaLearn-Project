@@ -1,17 +1,16 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Navigate, useParams } from 'react-router-dom';
 import { getDefaultLesson, getDefaultTopic, getWorkspaceSubject } from '../data/workspaceData';
 import type { WorkspaceLesson, WorkspaceMode, WorkspaceTopic } from '../data/workspaceData';
 import { useAuth } from '../context/AuthContext';
 import { useAchievementCelebration } from '../context/AchievementCelebrationContext';
-import { touchTopicAccess, recordTopicProgress, resolveTopicId } from '../services/learning.service';
+import { touchTopicAccess, recordTopicProgress, getMyLearningData, aggregateSubjects, type LearningTopic } from '../services/learning.service';
 import { checkForNewAchievements } from '../services/achievements.service';
 import AISidePanel from '../components/workspace/AISidePanel';
 import FloatingAIButton from '../components/workspace/FloatingAIButton';
 import LessonContent from '../components/workspace/LessonContent';
 import SubjectSelection from '../components/workspace/SubjectSelection';
 import SubjectSidebar from '../components/workspace/SubjectSidebar';
-import SubjectTools from '../components/workspace/SubjectTools';
 import WorkspaceHeader from '../components/workspace/WorkspaceHeader';
 
 export default function WorkspaceView() {
@@ -24,10 +23,8 @@ export default function WorkspaceView() {
   const [activeLesson, setActiveLesson] = useState<WorkspaceLesson | undefined>(undefined);
   const [activeTopic, setActiveTopic] = useState<WorkspaceTopic | undefined>(undefined);
   const [query, setQuery] = useState('');
-  const [activeTool, setActiveTool] = useState('');
   const [aiOpen, setAiOpen] = useState(false);
-  const [progressBump, setProgressBump] = useState(0);
-  const [resolvedTopicId, setResolvedTopicId] = useState<string | null>(null);
+  const [topics, setTopics] = useState<LearningTopic[]>([]);
 
   useEffect(() => {
     localStorage.setItem('workspace-sidebar-collapsed', String(collapsed));
@@ -38,36 +35,56 @@ export default function WorkspaceView() {
     const lesson = getDefaultLesson(subject);
     setActiveLesson(lesson);
     setActiveTopic(getDefaultTopic(subject));
-    setActiveTool(subject.tools[0] ?? 'Workspace tool');
     setActiveMode(subjectId ? 'lesson' : 'overview');
   }, [subject, subjectId]);
 
+  const refetchTopics = useCallback(async () => {
+    const data = await getMyLearningData();
+    setTopics(data);
+    return data;
+  }, []);
+
   useEffect(() => {
-    setResolvedTopicId(null);
-    if (!user || !activeTopic) return;
+    if (!user) return;
+    refetchTopics().catch(() => {});
+  }, [user?.id, refetchTopics]);
+
+  // The real Supabase row behind the currently-selected static topic, matched by slug.
+  const currentTopicRow = useMemo(
+    () => topics.find((t) => t.topicSlug === activeTopic?.id) ?? null,
+    [topics, activeTopic],
+  );
+
+  useEffect(() => {
+    if (!user || !currentTopicRow) return;
     let cancelled = false;
-    resolveTopicId(activeTopic.id).then((id) => {
-      if (cancelled || !id) return;
-      setResolvedTopicId(id);
-      touchTopicAccess(user.id, id)
-        .then(() => checkForNewAchievements(user.id))
-        .then((newlyEarned) => {
-          if (!cancelled) celebrate(newlyEarned);
-        })
-        .catch(() => {});
-    });
+    touchTopicAccess(user.id, currentTopicRow.topicId)
+      .then(() => checkForNewAchievements(user.id))
+      .then((newlyEarned) => {
+        if (!cancelled) celebrate(newlyEarned);
+      })
+      .catch(() => {});
     return () => {
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.id, activeTopic?.id]);
+  }, [user?.id, currentTopicRow?.topicId]);
+
+  const subjectTopics = useMemo(() => (subject ? topics.filter((t) => t.subjectCode === subject.id) : []), [topics, subject]);
+
+  const displaySubject = useMemo(() => {
+    if (!subject) return null;
+    const summary = aggregateSubjects(topics).find((s) => s.code === subject.id);
+    return summary
+      ? { ...subject, progress: summary.progress, lessonsCompleted: summary.completedCount, totalLessons: summary.totalCount }
+      : subject;
+  }, [subject, topics]);
 
   const isUnknownSubject = Boolean(subjectId && !subject);
-  const progress = useMemo(() => Math.min(100, (subject?.progress ?? 0) + progressBump), [progressBump, subject?.progress]);
 
   if (!subjectId) return <SubjectSelection />;
   if (isUnknownSubject) return <Navigate to="/workspace" replace />;
-  if (!subject) return null;
+  if (!subject || !displaySubject) return null;
 
   const selectLesson = (lesson: WorkspaceLesson, topic?: WorkspaceTopic) => {
     setActiveLesson(lesson);
@@ -75,9 +92,21 @@ export default function WorkspaceView() {
     setActiveMode('lesson');
   };
 
+  async function handleProgressBump() {
+    if (!user || !currentTopicRow) return;
+    try {
+      await recordTopicProgress(user.id, currentTopicRow.topicId, 15);
+      await refetchTopics();
+      const newlyEarned = await checkForNewAchievements(user.id);
+      celebrate(newlyEarned);
+    } catch {
+      // best-effort - the UI simply won't reflect this bump if it fails
+    }
+  }
+
   return (
     <div className="flex flex-col gap-4 flex-1 min-h-0">
-      <WorkspaceHeader subject={{ ...subject, progress }} activeMode={activeMode} query={query} onQueryChange={setQuery} />
+      <WorkspaceHeader subject={displaySubject} activeMode={activeMode} query={query} onQueryChange={setQuery} />
 
       <div className="flex gap-4 flex-1 min-h-0">
         <SubjectSidebar
@@ -93,22 +122,15 @@ export default function WorkspaceView() {
         />
 
         <main className="flex-1 min-w-0 overflow-y-auto space-y-4 pr-1">
-          <SubjectTools subject={subject} activeTool={activeTool} onToolChange={setActiveTool} />
           <LessonContent
             subject={subject}
             activeMode={activeMode}
             activeLesson={activeLesson}
             activeTopic={activeTopic}
-            progressBump={progressBump}
-            onProgressBump={() => {
-              setProgressBump((value) => Math.min(18, value + 2));
-              if (user && resolvedTopicId) {
-                recordTopicProgress(user.id, resolvedTopicId, 15)
-                  .then(() => checkForNewAchievements(user.id))
-                  .then((newlyEarned) => celebrate(newlyEarned))
-                  .catch(() => {});
-              }
-            }}
+            topicRow={currentTopicRow}
+            subjectTopics={subjectTopics}
+            onProgressBump={handleProgressBump}
+            onBookmarkChanged={refetchTopics}
           />
         </main>
       </div>
