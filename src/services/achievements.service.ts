@@ -1,5 +1,5 @@
 import { supabase } from '../lib/supabase';
-import type { LearningTopic } from './learning.service';
+import { getMyLearningData, computeStreak, computeLongestStreak, type LearningTopic } from './learning.service';
 import { createNotification } from './notifications.service';
 
 export interface AchievementContext {
@@ -191,10 +191,10 @@ export const MILESTONE_DEFINITIONS: MilestoneDefinition[] = [
   },
 ];
 
-/** Awards any badge whose conditions are newly met. Safe to call every page load - already-earned badges are no-ops. */
-export async function syncEarnedBadges(userId: string, ctx: AchievementContext): Promise<void> {
+/** Awards any badge whose conditions are newly met and returns the ones just earned. Safe to call every page load - already-earned badges are no-ops. */
+export async function syncEarnedBadges(userId: string, ctx: AchievementContext): Promise<BadgeDefinition[]> {
   const eligible = BADGE_DEFINITIONS.filter((badge) => badge.check(ctx));
-  if (eligible.length === 0) return;
+  if (eligible.length === 0) return [];
 
   const { data: existing, error: fetchError } = await supabase
     .from('achievements')
@@ -206,7 +206,7 @@ export async function syncEarnedBadges(userId: string, ctx: AchievementContext):
 
   const existingTitles = new Set((existing ?? []).map((row) => row.title));
   const newlyEarned = eligible.filter((badge) => !existingTitles.has(badge.name));
-  if (newlyEarned.length === 0) return;
+  if (newlyEarned.length === 0) return [];
 
   const rows = newlyEarned.map((badge) => ({
     profile_id: userId,
@@ -225,6 +225,21 @@ export async function syncEarnedBadges(userId: string, ctx: AchievementContext):
       createNotification(userId, `New badge earned: ${badge.name}`, badge.desc, 'achievement').catch(() => {}),
     ),
   );
+
+  return newlyEarned;
+}
+
+/**
+ * Full check for newly-earned badges from anywhere in the app (not just the Accomplishments page):
+ * fetches current progress/streak, syncs against real conditions, and returns anything just earned
+ * so the caller can show a celebration. Safe to call often - a no-op when nothing new is earned.
+ */
+export async function checkForNewAchievements(userId: string): Promise<BadgeDefinition[]> {
+  const topics = await getMyLearningData();
+  const streak = computeStreak(topics);
+  const longestStreak = computeLongestStreak(topics);
+  const ctx = getAchievementContext(topics, streak.currentStreak, longestStreak);
+  return syncEarnedBadges(userId, ctx);
 }
 
 export async function getEarnedAchievements(userId: string): Promise<EarnedAchievement[]> {

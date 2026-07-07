@@ -6,6 +6,7 @@ import AppLayout from "./AppLayout";
 
 import { ThemeProvider } from "./context/ThemeContext";
 import { AuthProvider } from "./context/AuthContext";
+import { AchievementCelebrationProvider } from "./context/AchievementCelebrationContext";
 
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 
@@ -26,46 +27,48 @@ export default function App() {
   return (
     <ThemeProvider>
       <AuthProvider>
-        <BrowserRouter>
-          <Routes>
-            {/* Public Routes */}
-            <Route path="/login" element={<LoginPage />} />
-            <Route path="/signup" element={<SignupPage />} />
-            <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+        <AchievementCelebrationProvider>
+          <BrowserRouter>
+            <Routes>
+              {/* Public Routes */}
+              <Route path="/login" element={<LoginPage />} />
+              <Route path="/signup" element={<SignupPage />} />
+              <Route path="/forgot-password" element={<ForgotPasswordPage />} />
 
-            {/* Protected Routes */}
-            <Route
-              element={
-                <ProtectedRoute>
-                  <AppLayout />
-                </ProtectedRoute>
-              }
-            >
-              <Route path="/" element={<DashboardPage />} />
-              <Route path="/my-learning" element={<MyLearningPage />} />
-              <Route path="/subjects" element={<SubjectsPage />} />
+              {/* Protected Routes */}
               <Route
-                path="/subjects/:subjectId"
-                element={<SubjectDetailPage />}
-              />
-              <Route path="/ai-tutor" element={<AITutorPage />} />
-              <Route path="/study-planner" element={<StudyPlannerPage />} />
-              <Route path="/past-papers" element={<PastPapersPage />} />
-              <Route path="/exams" element={<ExamsPage />} />
-              <Route path="/resources" element={<ResourcesPage />} />
-              <Route
-                path="/accomplishments"
-                element={<AccomplishmentsPage />}
-              />
-              <Route path="/settings" element={<SettingsPage />} />
-              <Route path="/workspace" element={<WorkspacePage />} />
-              <Route path="/workspace/:subjectId" element={<WorkspacePage />} />
-            </Route>
+                element={
+                  <ProtectedRoute>
+                    <AppLayout />
+                  </ProtectedRoute>
+                }
+              >
+                <Route path="/" element={<DashboardPage />} />
+                <Route path="/my-learning" element={<MyLearningPage />} />
+                <Route path="/subjects" element={<SubjectsPage />} />
+                <Route
+                  path="/subjects/:subjectId"
+                  element={<SubjectDetailPage />}
+                />
+                <Route path="/ai-tutor" element={<AITutorPage />} />
+                <Route path="/study-planner" element={<StudyPlannerPage />} />
+                <Route path="/past-papers" element={<PastPapersPage />} />
+                <Route path="/exams" element={<ExamsPage />} />
+                <Route path="/resources" element={<ResourcesPage />} />
+                <Route
+                  path="/accomplishments"
+                  element={<AccomplishmentsPage />}
+                />
+                <Route path="/settings" element={<SettingsPage />} />
+                <Route path="/workspace" element={<WorkspacePage />} />
+                <Route path="/workspace/:subjectId" element={<WorkspacePage />} />
+              </Route>
 
-            {/* Fallback */}
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
-        </BrowserRouter>
+              {/* Fallback */}
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Routes>
+          </BrowserRouter>
+        </AchievementCelebrationProvider>
       </AuthProvider>
     </ThemeProvider>
   );

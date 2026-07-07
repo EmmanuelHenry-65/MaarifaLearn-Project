@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useAchievementCelebration } from '../context/AchievementCelebrationContext';
 import { ensureProfile, getMyLearningData, computeStreak, computeLongestStreak, type LearningTopic } from '../services/learning.service';
 import {
   BADGE_DEFINITIONS,
@@ -45,6 +46,7 @@ function formatRelativeDate(iso: string): string {
 export default function AchievementsView() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { celebrate } = useAchievementCelebration();
   const [topics, setTopics] = useState<LearningTopic[]>([]);
   const [earned, setEarned] = useState<EarnedAchievement[]>([]);
   const [rank, setRank] = useState<number | null>(null);
@@ -64,12 +66,13 @@ export default function AchievementsView() {
         const streak = computeStreak(fetchedTopics);
         const longestStreak = computeLongestStreak(fetchedTopics);
         const ctx = getAchievementContext(fetchedTopics, streak.currentStreak, longestStreak);
-        await syncEarnedBadges(user.id, ctx);
+        const newlyEarned = await syncEarnedBadges(user.id, ctx);
         const [fetchedEarned, fetchedRank] = await Promise.all([getEarnedAchievements(user.id), getRank()]);
         if (!cancelled) {
           setTopics(fetchedTopics);
           setEarned(fetchedEarned);
           setRank(fetchedRank);
+          celebrate(newlyEarned);
         }
       } catch (err) {
         if (!cancelled) setLoadError(err instanceof Error ? err.message : 'Failed to load your achievements.');
