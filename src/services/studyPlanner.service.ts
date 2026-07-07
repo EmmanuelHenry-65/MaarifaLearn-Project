@@ -3,6 +3,7 @@
 // deadlines from it client-side (see the compute* functions below) rather
 // than issuing a separate round trip for every widget.
 import { supabase } from '../lib/supabase';
+import { createNotification } from './notifications.service';
 
 export type TaskType = 'lesson' | 'practice' | 'task' | 'past_paper' | 'revision';
 export type TaskPriority = 'low' | 'medium' | 'high';
@@ -300,4 +301,48 @@ export function getUpcomingDeadlines(tasks: StudyTask[], limit = 3): StudyTask[]
     .filter((t) => !t.completed && t.dueDate && t.dueDate > todayISO)
     .sort((a, b) => (a.dueDate ?? '').localeCompare(b.dueDate ?? ''))
     .slice(0, limit);
+}
+
+/**
+ * Creates a "planner" notification for each of today's incomplete tasks that
+ * doesn't already have one - dedupes by exact title match instead of a
+ * schema change, so calling this repeatedly (e.g. every page load) is safe
+ * and never sends the same reminder twice.
+ */
+export async function notifyDueTasksToday(userId: string): Promise<void> {
+  // Deliberately does NOT use getOrCreateDefaultPlan - this runs on every
+  // page load for every user, and a due-task check shouldn't have the side
+  // effect of creating study plan data for someone who's never touched
+  // that feature. If they have no plan yet, there's nothing to remind them of.
+  const { data: existingPlan, error: planError } = await supabase
+    .from('study_plans')
+    .select('id')
+    .eq('profile_id', userId)
+    .order('created_at', { ascending: true })
+    .limit(1)
+    .maybeSingle<{ id: string }>();
+  if (planError || !existingPlan) return;
+
+  const todayISO = toISODate(new Date());
+  const tasks = await getTasksInRange(existingPlan.id, todayISO, todayISO);
+  const dueToday = tasks.filter((t) => !t.completed);
+  if (dueToday.length === 0) return;
+
+  for (const task of dueToday) {
+    const title = `Study reminder: ${task.title}`;
+    const { data: existing } = await supabase
+      .from('notifications')
+      .select('id')
+      .eq('profile_id', userId)
+      .eq('title', title)
+      .maybeSingle();
+    if (existing) continue;
+
+    await createNotification(
+      userId,
+      title,
+      `Due today${task.subject ? ` • ${task.subject}` : ''}`,
+      'planner',
+    ).catch(() => {});
+  }
 }
