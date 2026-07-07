@@ -1,9 +1,13 @@
-import React from 'react';
-import { NavLink } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
+import { NavLink, useNavigate } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext';
+import { useAuth } from '../context/AuthContext';
+import { getProfile } from '../services/learning.service';
 
 interface SidebarProps {
   activeTab: string;
+  open: boolean;
+  onClose: () => void;
 }
 
 const ThemeSpecificIcon = ({ theme, isActive, originalIcon }: { theme: 'dark' | 'light', isActive: boolean, originalIcon: React.ReactNode }) => {
@@ -91,23 +95,68 @@ const icons: Record<string, React.JSX.Element> = {
   ),
 };
 
-export default function Sidebar(_: SidebarProps) {
+export default function Sidebar({ open, onClose }: SidebarProps) {
   const { theme } = useTheme();
-  
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const [name, setName] = useState<string | null>(null);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!user) return;
+    let cancelled = false;
+    getProfile(user.id)
+      .then((profile) => {
+        if (!cancelled && profile) {
+          setName(profile.fullName);
+          setAvatarUrl(profile.avatarUrl);
+        }
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [user]);
+
+  const displayName = name ?? user?.email?.split('@')[0] ?? 'Learner';
+  const initials = displayName
+    .split(' ')
+    .map((part) => part[0])
+    .slice(0, 2)
+    .join('')
+    .toUpperCase();
+
   return (
-    <aside className={`fixed left-0 top-0 bottom-0 w-[200px] flex flex-col border-r z-50 ${theme === 'light' ? 'bg-gradient-to-b from-white to-slate-50 border-slate-200 shadow-xl shadow-slate-200/50' : 'bg-gradient-to-b from-[#0d1225] to-[#0a0e1a] border-[rgba(56,78,135,0.2)]'}`}>
+    <aside
+      className={`fixed left-0 top-0 bottom-0 w-[220px] sm:w-[200px] flex flex-col border-r z-50 transition-transform duration-300 lg:translate-x-0 ${
+        open ? 'translate-x-0' : '-translate-x-full'
+      } ${theme === 'light' ? 'bg-gradient-to-b from-white to-slate-50 border-slate-200 shadow-xl shadow-slate-200/50' : 'bg-gradient-to-b from-[#0d1225] to-[#0a0e1a] border-[rgba(56,78,135,0.2)]'}`}
+    >
       {/* Logo */}
-      <div className="flex items-center gap-2.5 px-5 py-5 flex-shrink-0">
-        <div className="relative w-9 h-9 rounded-xl bg-gradient-to-br from-teal-400 to-blue-600 flex items-center justify-center shadow-lg shadow-teal-500/20">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" />
-            <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" />
+      <div className="flex items-center justify-between gap-2.5 px-5 py-5 flex-shrink-0">
+        <div className="flex items-center gap-2.5">
+          <div className="relative w-9 h-9 rounded-xl bg-gradient-to-br from-teal-400 to-blue-600 flex items-center justify-center shadow-lg shadow-teal-500/20">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" />
+              <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" />
+            </svg>
+          </div>
+          <div>
+            <span className="text-white font-bold text-sm leading-tight block">Maarifa</span>
+            <span className="text-teal-400 font-bold text-sm leading-tight block">Learn</span>
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="Close menu"
+          className={`lg:hidden p-1.5 rounded-lg ${theme === 'light' ? 'text-slate-500 hover:bg-slate-100' : 'text-gray-400 hover:bg-white/5'}`}
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+            <line x1="18" y1="6" x2="6" y2="18" />
+            <line x1="6" y1="6" x2="18" y2="18" />
           </svg>
-        </div>
-        <div>
-          <span className="text-white font-bold text-sm leading-tight block">Maarifa</span>
-          <span className="text-teal-400 font-bold text-sm leading-tight block">Learn</span>
-        </div>
+        </button>
       </div>
 
       {/* Nav Items */}
@@ -117,10 +166,11 @@ export default function Sidebar(_: SidebarProps) {
             key={item.label}
             to={item.path}
             end={item.path === '/'}
+            onClick={onClose}
             className={({ isActive }) =>
               `sidebar-item w-full flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] font-medium transition-all group ${
                 isActive
-                  ? theme === 'light' 
+                  ? theme === 'light'
                     ? 'active text-cyan-700 bg-cyan-50 border-l-[3px] border-cyan-600 font-bold'
                     : 'active text-cyan-400 bg-cyan-400/10 border-l-[3px] border-cyan-400 font-bold'
                   : theme === 'light'
@@ -131,10 +181,10 @@ export default function Sidebar(_: SidebarProps) {
           >
             {({ isActive }) => (
               <>
-                <ThemeSpecificIcon 
-                  theme={theme} 
-                  isActive={isActive} 
-                  originalIcon={icons[item.icon]} 
+                <ThemeSpecificIcon
+                  theme={theme}
+                  isActive={isActive}
+                  originalIcon={icons[item.icon]}
                 />
                 {item.label}
               </>
@@ -158,23 +208,22 @@ export default function Sidebar(_: SidebarProps) {
           <div className="absolute top-2 left-2 text-yellow-400 text-[6px]">✦</div>
         </div>
 
-        {/* Small profile item as in mockup 2 */}
-        <div className={`flex items-center gap-2.5 p-2 rounded-xl border transition-all ${theme === 'light' ? 'bg-white border-slate-200 shadow-sm' : 'bg-[rgba(17,24,50,0.5)] border-[rgba(56,78,135,0.15)]'}`}>
-          <div className={`w-7 h-7 rounded-full overflow-hidden flex-shrink-0 ring-1 ${theme === 'light' ? 'ring-slate-200' : 'ring-[rgba(56,78,135,0.3)]'}`}>
-            <img
-              src="/images/avatar-emmanuel.jpg"
-              alt="Emmanuel"
-              className="w-full h-full object-cover"
-            />
+        {/* Profile item - navigates to Settings */}
+        <button
+          onClick={() => navigate('/settings')}
+          className={`w-full flex items-center gap-2.5 p-2 rounded-xl border transition-all ${theme === 'light' ? 'bg-white border-slate-200 shadow-sm hover:border-slate-300' : 'bg-[rgba(17,24,50,0.5)] border-[rgba(56,78,135,0.15)] hover:border-[rgba(56,78,135,0.35)]'}`}
+        >
+          <div className={`w-7 h-7 rounded-full overflow-hidden flex-shrink-0 ring-1 flex items-center justify-center text-[10px] font-bold text-white bg-gradient-to-br from-teal-400 to-blue-600 ${theme === 'light' ? 'ring-slate-200' : 'ring-[rgba(56,78,135,0.3)]'}`}>
+            {avatarUrl ? <img src={avatarUrl} alt={displayName} className="w-full h-full object-cover" /> : initials || '?'}
           </div>
           <div className="text-left flex-1 min-w-0">
-            <p className={`text-xs font-semibold leading-tight truncate ${theme === 'light' ? 'text-slate-800' : 'text-white'}`}>Emmanuel</p>
+            <p className={`text-xs font-semibold leading-tight truncate ${theme === 'light' ? 'text-slate-800' : 'text-white'}`}>{displayName}</p>
             <p className="text-gray-500 text-[10px] leading-tight truncate">Learner</p>
           </div>
           <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-gray-500 mr-0.5">
             <polyline points="6,9 12,15 18,9" />
           </svg>
-        </div>
+        </button>
       </div>
     </aside>
   );

@@ -1,10 +1,14 @@
+import { useEffect, useState } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import Sidebar from './components/Sidebar';
 import TopNav from './components/TopNav';
 import { useTheme } from './context/ThemeContext';
+import { useAuth } from './context/AuthContext';
+import { getProfile } from './services/learning.service';
+import { usePreferencesSync } from './hooks/usePreferencesSync';
 
 const routeToTitle: Record<string, { title: string; subtitle: string }> = {
-  '/': { title: 'Good morning, Emmanuel! 👋', subtitle: '"Every day is a step closer to your goals."' },
+  '/': { title: 'Welcome back! 👋', subtitle: '"Every day is a step closer to your goals."' },
   '/my-learning': { title: 'My Learning', subtitle: 'Track your progress and continue your learning journey.' },
   '/subjects': { title: 'Subjects', subtitle: 'Explore all subjects in the CBC curriculum. Track your progress and master every topic.' },
   '/ai-tutor': { title: 'AI Tutor', subtitle: 'Your intelligent learning companion. Ask anything, learn anything.' },
@@ -31,15 +35,47 @@ const pathToLabel: Record<string, string> = {
   '/workspace': 'My Learning',
 };
 
+function timeOfDayGreeting(): string {
+  const hour = new Date().getHours();
+  if (hour < 12) return 'Good morning';
+  if (hour < 18) return 'Good afternoon';
+  return 'Good evening';
+}
+
 export default function AppLayout() {
   const location = useLocation();
   const { theme } = useTheme();
+  const { user } = useAuth();
+  const [firstName, setFirstName] = useState<string | null>(null);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  // Loads the signed-in user's saved theme from their account once per session.
+  usePreferencesSync();
+
+  useEffect(() => {
+    if (!user) return;
+    let cancelled = false;
+    getProfile(user.id)
+      .then((profile) => {
+        if (!cancelled && profile) setFirstName(profile.fullName.split(' ')[0]);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [user]);
+
+  // Close the mobile drawer whenever the route changes (e.g. after tapping a nav link).
+  useEffect(() => {
+    setSidebarOpen(false);
+  }, [location.pathname]);
 
   // For subject detail pages like /subjects/mathematics, treat as Subjects
   const isSubjectDetail = location.pathname.startsWith('/subjects/');
   const isWorkspace = location.pathname.startsWith('/workspace');
   const key = isSubjectDetail ? '/subjects' : isWorkspace ? '/workspace' : location.pathname;
   const meta = routeToTitle[key] || routeToTitle['/'];
+  const title = key === '/' ? `${timeOfDayGreeting()}${firstName ? `, ${firstName}` : ''}! 👋` : meta.title;
 
   const activeTab = pathToLabel[key] || 'Dashboard';
 
@@ -49,10 +85,13 @@ export default function AppLayout() {
       <div className={`fixed inset-0 pointer-events-none transition-opacity duration-500 ${theme === 'light' ? 'opacity-20 bg-[radial-gradient(ellipse_at_top_right,rgba(6,182,212,0.1)_0%,transparent_50%)]' : 'bg-[radial-gradient(ellipse_at_top_right,rgba(6,182,212,0.04)_0%,transparent_50%)]'}`} />
       <div className={`fixed inset-0 pointer-events-none transition-opacity duration-500 ${theme === 'light' ? 'opacity-10 bg-[radial-gradient(ellipse_at_bottom_left,rgba(139,92,246,0.05)_0%,transparent_50%)]' : 'bg-[radial-gradient(ellipse_at_bottom_left,rgba(139,92,246,0.03)_0%,transparent_50%)]'}`} />
 
-      <Sidebar activeTab={activeTab} />
+      {sidebarOpen && (
+        <div className="fixed inset-0 bg-black/50 z-40 lg:hidden" onClick={() => setSidebarOpen(false)} />
+      )}
+      <Sidebar activeTab={activeTab} open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
-      <div className="flex-1 ml-[200px] relative z-10 flex flex-col p-6 overflow-hidden min-w-0">
-        <TopNav title={meta.title} subtitle={meta.subtitle} />
+      <div className="flex-1 lg:ml-[200px] relative z-10 flex flex-col p-4 sm:p-6 overflow-hidden min-w-0">
+        <TopNav title={title} subtitle={meta.subtitle} onMenuClick={() => setSidebarOpen(true)} />
         <div key={location.pathname} className="page-transition flex-1 min-h-0">
           <Outlet />
         </div>
