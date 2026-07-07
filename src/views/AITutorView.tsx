@@ -2,10 +2,11 @@ import { useEffect, useRef, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import {
   askTutor,
-  getRecentConversations,
+  getRecentSessions,
+  isSessionContinuable,
   countQuestionsToday,
   uploadAttachment,
-  type TutorConversation,
+  type TutorSession,
   type TutorAttachment,
 } from '../services/aiTutor.service';
 
@@ -127,7 +128,8 @@ function BotAvatar() {
 export default function AITutorView() {
   const { user } = useAuth();
   const [question, setQuestion] = useState('');
-  const [conversations, setConversations] = useState<TutorConversation[]>([]);
+  const [sessions, setSessions] = useState<TutorSession[]>([]);
+  const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
@@ -141,12 +143,16 @@ export default function AITutorView() {
     let cancelled = false;
     setLoading(true);
     setLoadError(null);
-    getRecentConversations()
+    getRecentSessions()
       .then((data) => {
-        // getRecentConversations fetches newest-first (needed for the LIMIT
-        // to keep the most recent N) - reverse to chronological order for
-        // the thread view, since new messages get appended at the end.
-        if (!cancelled) setConversations([...data].reverse());
+        if (cancelled) return;
+        // getRecentSessions fetches newest-first (needed for the LIMIT to
+        // keep the most recent N) - reverse to chronological order for the
+        // thread view, since new messages get appended at the end.
+        const chronological = [...data].reverse();
+        setSessions(chronological);
+        const latest = chronological[chronological.length - 1];
+        if (isSessionContinuable(latest)) setActiveConversationId(latest.id);
       })
       .catch((err) => {
         if (!cancelled) setLoadError(err instanceof Error ? err.message : 'Failed to load your conversations.');
@@ -159,9 +165,11 @@ export default function AITutorView() {
     };
   }, [user?.id]);
 
+  const allMessages = sessions.flatMap((s) => s.messages);
+
   useEffect(() => {
     threadEndRef.current?.scrollIntoView({ block: 'end' });
-  }, [conversations.length]);
+  }, [allMessages.length]);
 
   async function handleAsk(text?: string) {
     const trimmed = (text ?? question).trim();
@@ -171,8 +179,20 @@ export default function AITutorView() {
     const attachment = pendingAttachment;
     setPendingAttachment(null);
     try {
-      const created = await askTutor(user.id, trimmed, attachment);
-      setConversations((prev) => [...prev, created]);
+      const result = await askTutor(user.id, trimmed, attachment, activeConversationId);
+      setActiveConversationId(result.conversationId);
+      setSessions((prev) => {
+        if (prev.length > 0 && prev[prev.length - 1].id === result.conversationId) {
+          const updated = [...prev];
+          const last = updated[updated.length - 1];
+          updated[updated.length - 1] = {
+            ...last,
+            messages: [...last.messages, result.userMessage, result.assistantMessage],
+          };
+          return updated;
+        }
+        return [...prev, { id: result.conversationId, messages: [result.userMessage, result.assistantMessage] }];
+      });
     } catch (err) {
       setLoadError(err instanceof Error ? err.message : 'Failed to send your question.');
     } finally {
@@ -194,8 +214,8 @@ export default function AITutorView() {
     }
   }
 
-  const questionsToday = countQuestionsToday(conversations);
-  const hasConversation = conversations.length > 0;
+  const questionsToday = countQuestionsToday(sessions);
+  const hasConversation = allMessages.length > 0;
 
   const inputBar = (
     <div className="rounded-xl bg-[rgba(17,24,50,0.8)] border border-[rgba(56,78,135,0.3)] focus-within:border-cyan-500/40 transition-colors p-3">
@@ -297,28 +317,29 @@ export default function AITutorView() {
           </>
         ) : (
           <>
-            <div className="flex-1 overflow-y-auto space-y-4 pr-1">
-              {conversations.map((conv) => (
-                <div key={conv.id} className="space-y-3">
-                  <div className="flex justify-end">
+            <div className="flex-1 overflow-y-auto space-y-3 pr-1">
+              {allMessages.map((msg) =>
+                msg.sender === 'user' ? (
+                  <div key={msg.id} className="flex justify-end">
                     <div className="max-w-[75%] bg-gradient-to-br from-cyan-500 to-blue-600 rounded-2xl rounded-br-sm px-4 py-2.5">
-                      <p className="text-white text-sm leading-relaxed">{conv.question}</p>
-                      {conv.attachment && (
+                      <p className="text-white text-sm leading-relaxed">{msg.content}</p>
+                      {msg.attachment && (
                         <div className="mt-1.5">
-                          <AttachmentChip name={conv.attachment.name} url={conv.attachment.signedUrl} />
+                          <AttachmentChip name={msg.attachment.name} url={msg.attachment.signedUrl} />
                         </div>
                       )}
-                      <p className="text-cyan-100 text-[10px] mt-1 text-right">{formatMessageTime(conv.createdAt)}</p>
+                      <p className="text-cyan-100 text-[10px] mt-1 text-right">{formatMessageTime(msg.createdAt)}</p>
                     </div>
                   </div>
-                  <div className="flex items-start gap-2.5">
+                ) : (
+                  <div key={msg.id} className="flex items-start gap-2.5">
                     <BotAvatar />
                     <div className="max-w-[75%] bg-[rgba(17,24,50,0.7)] border border-[rgba(56,78,135,0.25)] rounded-2xl rounded-tl-sm px-4 py-2.5">
-                      <p className="text-gray-300 text-sm leading-relaxed">{conv.answer}</p>
+                      <p className="text-gray-300 text-sm leading-relaxed">{msg.content}</p>
                     </div>
                   </div>
-                </div>
-              ))}
+                ),
+              )}
               <div ref={threadEndRef} />
             </div>
             {inputBar}
