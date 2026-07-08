@@ -33,7 +33,7 @@ export default function AITutor({ topics }: AITutorProps) {
     ];
   }, [focusTopic]);
 
-  const goToTutor = () => navigate('/ai-tutor');
+  const goToTutor = (text?: string) => navigate(text ? `/ai-tutor?q=${encodeURIComponent(text)}` : '/ai-tutor');
 
   return (
     <div className="glass-card p-5 relative overflow-hidden">
@@ -56,7 +56,7 @@ export default function AITutor({ topics }: AITutorProps) {
         className="flex items-center gap-2 mb-4 mt-2"
         onSubmit={(e) => {
           e.preventDefault();
-          goToTutor();
+          goToTutor(query);
         }}
       >
         <div className="flex-1 relative">
@@ -81,7 +81,7 @@ export default function AITutor({ topics }: AITutorProps) {
           {suggestions.map((s, i) => (
             <button
               key={i}
-              onClick={() => goToTutor()}
+              onClick={() => goToTutor(s)}
               className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl border text-xs transition-all text-left ${suggestionBg}`}
             >
               <span className="leading-relaxed">{s}</span>

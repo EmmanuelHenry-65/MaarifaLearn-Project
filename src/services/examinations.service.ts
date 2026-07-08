@@ -37,6 +37,8 @@ export interface ExamPaper {
   latestScore: number | null;
   /** How many times this user has attempted this specific paper. */
   attemptCount: number;
+  /** When this user most recently started an attempt on this paper, or null if never attempted. */
+  lastAttemptAt: string | null;
 }
 
 export interface ExamQuestion {
@@ -218,6 +220,7 @@ export async function getExamPapers(userId: string): Promise<ExamPaper[]> {
         completionStatus,
         latestScore: latest && latest.status !== 'in_progress' ? Math.round(Number(latest.percentage ?? 0)) : null,
         attemptCount: attempts.length,
+        lastAttemptAt: latest?.started_at ?? null,
       };
     });
 }
@@ -316,6 +319,18 @@ export async function startAttempt(userId: string, paperId: string): Promise<str
     .single();
   if (error) throw error;
   return data.id;
+}
+
+/**
+ * Autosaves in-progress answers via the save_attempt_draft() RPC
+ * (database/schema/30_exam_attempt_drafts.sql) -- a narrower sibling of
+ * submit_exam_attempt() that only writes the `answer` column, never grades
+ * anything, and is a no-op once the attempt is no longer 'in_progress'.
+ */
+export async function saveAttemptDraft(attemptId: string, answers: Record<string, string>): Promise<void> {
+  if (Object.keys(answers).length === 0) return;
+  const { error } = await supabase.rpc('save_attempt_draft', { p_attempt_id: attemptId, p_answers: answers });
+  if (error) throw error;
 }
 
 export interface AttemptResult {

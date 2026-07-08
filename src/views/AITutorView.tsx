@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import {
   askTutor,
@@ -148,6 +149,8 @@ function BotAvatar() {
 
 export default function AITutorView() {
   const { user } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const appliedDeepLink = useRef(false);
   const [question, setQuestion] = useState('');
   const [sessions, setSessions] = useState<TutorSession[]>([]);
   const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
@@ -228,6 +231,19 @@ export default function AITutorView() {
       setSending(false);
     }
   }
+
+  // Deep-link support: /ai-tutor?q=<question> -- lets the Dashboard widget and
+  // exam review's "Generate Similar Question" hand off a real typed question
+  // instead of discarding it and dropping the student on an empty chat.
+  useEffect(() => {
+    if (appliedDeepLink.current || !user) return;
+    const q = searchParams.get('q');
+    if (!q) return;
+    appliedDeepLink.current = true;
+    handleAsk(q);
+    setSearchParams({}, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, searchParams]);
 
   async function handleFileSelected(file: File | undefined) {
     if (!file || !user) return;

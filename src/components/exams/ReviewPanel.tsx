@@ -8,10 +8,11 @@ interface ReviewPanelProps {
   answers: Record<string, string>;
   gradedAnswers: GradedAnswer[];
   onBackToResults: () => void;
+  onOpenRelatedLesson: () => void;
   onGenerateSimilar: (questionId: string) => void;
 }
 
-export default function ReviewPanel({ paper, questions, answers, gradedAnswers, onBackToResults, onGenerateSimilar }: ReviewPanelProps) {
+export default function ReviewPanel({ paper, questions, answers, gradedAnswers, onBackToResults, onOpenRelatedLesson, onGenerateSimilar }: ReviewPanelProps) {
   const { theme } = useTheme();
   const [activeIndex, setActiveIndex] = useState(0);
   const question = questions[activeIndex];
@@ -64,8 +65,7 @@ export default function ReviewPanel({ paper, questions, answers, gradedAnswers, 
           <h3 className={`font-bold text-base ${textColor}`}>AI Explanation</h3>
           <p className={`text-sm mt-2 ${mutedColor}`}>{question.aiExplanation ?? 'No AI explanation available for this question yet.'}</p>
           <div className="flex flex-wrap gap-2 mt-4">
-            <button className="px-3 py-2 rounded-lg bg-cyan-500/10 border border-cyan-500/20 text-cyan-600 text-xs font-bold">Open Related Lesson</button>
-            <button className="px-3 py-2 rounded-lg bg-purple-500/10 border border-purple-500/20 text-purple-600 text-xs font-bold">Retry Question</button>
+            <button onClick={onOpenRelatedLesson} className="px-3 py-2 rounded-lg bg-cyan-500/10 border border-cyan-500/20 text-cyan-600 text-xs font-bold">Open Related Lesson</button>
             <button onClick={() => onGenerateSimilar(question.id)} className="px-3 py-2 rounded-lg bg-green-500/10 border border-green-500/20 text-green-600 text-xs font-bold">Generate Similar Question</button>
           </div>
         </div>

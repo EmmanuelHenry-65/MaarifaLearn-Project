@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import type { ExamPaper, ExamQuestion } from '../../services/examinations.service';
 import type { ExamMode } from '../../views/ExamsView';
 import { useTheme } from '../../context/ThemeContext';
+import SimpleCalculator from '../common/SimpleCalculator';
 
 interface ExamInterfaceProps {
   paper: ExamPaper;
@@ -172,7 +173,7 @@ function QuestionViewer({ question, value, onChange, answerBg, textColor, mutedC
 
 function getToolsForPaper(subjectId: string) {
   const common = ['Reference Materials'];
-  if (subjectId === 'mathematics') return ['Scientific Calculator', 'Formula Sheet', 'Working Scratchpad', 'Graph Placeholder', 'Equation Editor'];
+  if (subjectId === 'mathematics') return ['Scientific Calculator', 'Formula Sheet', 'Working Scratchpad', 'Graphing Notes', 'Equation Editor'];
   if (subjectId === 'physics') return ['Calculator', 'Formula Sheet', 'Unit Converter', 'Working Area'];
   if (subjectId === 'chemistry') return ['Periodic Table', 'Equation Workspace', 'Calculator', 'Reaction Reference'];
   if (subjectId === 'computer-studies') return ['Code Editor', 'Algorithm Workspace', 'Flowchart Viewer'];
@@ -185,11 +186,7 @@ function getToolsForPaper(subjectId: string) {
 }
 
 function ToolContent({ tool, subjectId, mutedColor, answerBg }: { tool: string; subjectId: string; mutedColor: string; answerBg: string }) {
-  if (/calculator|converter/i.test(tool)) return <div className="grid grid-cols-4 gap-2 max-w-xs">{['7','8','9','÷','4','5','6','×','1','2','3','-','0','.','=','+'].map((key) => <button key={key} className="h-9 rounded-lg bg-cyan-500/10 border border-cyan-500/20 text-cyan-600 font-bold">{key}</button>)}</div>;
+  if (/calculator|converter/i.test(tool)) return <SimpleCalculator />;
   if (/formula|periodic|reference|sarufi|sports/i.test(tool)) return <p className={`text-sm ${mutedColor}`}>Reference panel for {subjectId}: key formulas, concepts, rules, and quick definitions appear here.</p>;
-  if (/code/i.test(tool)) return <pre className={`rounded-xl border p-3 text-xs overflow-x-auto ${answerBg}`}>{`function answer(question) {
-  const plan = analyze(question);
-  return solve(plan);
-}`}</pre>;
-  return <textarea className={`w-full min-h-[90px] rounded-xl border p-3 text-sm ${answerBg}`} placeholder={`Use ${tool} here...`} />;
+  return <textarea className={`w-full min-h-[90px] rounded-xl border p-3 text-sm font-mono ${answerBg}`} placeholder={`Use ${tool} here...`} />;
 }

@@ -10,10 +10,11 @@ interface ResultsDashboardProps {
   gradingEssays?: boolean;
   onReview: () => void;
   onRetry: () => void;
+  onRetryGrading: () => void;
   onBack: () => void;
 }
 
-export default function ResultsDashboard({ paper, questions, gradedAnswers, result, elapsedMinutes, gradingEssays, onReview, onRetry, onBack }: ResultsDashboardProps) {
+export default function ResultsDashboard({ paper, questions, gradedAnswers, result, elapsedMinutes, gradingEssays, onReview, onRetry, onRetryGrading, onBack }: ResultsDashboardProps) {
   const { theme } = useTheme();
   const textColor = theme === 'light' ? 'text-slate-900' : 'text-white';
   const mutedColor = theme === 'light' ? 'text-slate-500' : 'text-gray-400';
@@ -151,8 +152,16 @@ export default function ResultsDashboard({ paper, questions, gradedAnswers, resu
             <p className={`${mutedColor} text-xs leading-relaxed`}>
               {gradingEssays
                 ? `The AI is grading ${pendingReview} short-answer/essay ${pendingReview === 1 ? 'question' : 'questions'} against the marking scheme now — your score above will update in a few seconds.`
-                : `${pendingReview} short-answer/essay ${pendingReview === 1 ? 'question' : 'questions'} on this paper could not be graded automatically. Open Smart Review to see the marking scheme and your answer.`}
+                : `${pendingReview} short-answer/essay ${pendingReview === 1 ? 'question' : 'questions'} on this paper could not be graded automatically. Open Smart Review to see the marking scheme and your answer, or retry AI grading below.`}
             </p>
+            {!gradingEssays && (
+              <button
+                onClick={onRetryGrading}
+                className="w-full mt-3 py-2.5 rounded-xl bg-amber-500 text-white text-xs font-bold hover:bg-amber-400 transition-colors"
+              >
+                Retry Grading
+              </button>
+            )}
           </div>
         )}
 

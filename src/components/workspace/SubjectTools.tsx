@@ -1,5 +1,7 @@
+import { useState } from 'react';
 import type { WorkspaceSubject } from '../../data/workspaceData';
 import { useTheme } from '../../context/ThemeContext';
+import SimpleCalculator from '../common/SimpleCalculator';
 
 interface SubjectToolsProps {
   subject: WorkspaceSubject;
@@ -12,6 +14,11 @@ export default function SubjectTools({ subject, activeTool, onToolChange }: Subj
   const textColor = theme === 'light' ? 'text-slate-900' : 'text-white';
   const mutedColor = theme === 'light' ? 'text-slate-500' : 'text-gray-500';
   const editorBg = theme === 'light' ? 'bg-slate-50 border-slate-200' : 'bg-[rgba(17,24,50,0.55)] border-[rgba(56,78,135,0.18)]';
+  const isCalculator = /calculator|equation|converter|balancing/i.test(activeTool);
+  // Keyed by tool name so switching tools (within this session) doesn't wipe
+  // what was typed into a different one -- content still resets on navigating
+  // away, since there's nowhere in the schema to persist it long-term yet.
+  const [draftsByTool, setDraftsByTool] = useState<Record<string, string>>({});
 
   return (
     <div className="glass-card p-4">
@@ -40,43 +47,26 @@ export default function SubjectTools({ subject, activeTool, onToolChange }: Subj
       <div className={`rounded-xl border p-4 min-h-[130px] ${editorBg}`}>
         <div className="flex items-center justify-between mb-3">
           <p className={`font-bold text-sm ${textColor}`}>{activeTool}</p>
-          <button className="text-cyan-600 text-xs font-bold hover:text-cyan-700">Reset tool</button>
+          {!isCalculator && (
+            <button
+              onClick={() => setDraftsByTool((prev) => ({ ...prev, [activeTool]: '' }))}
+              className="text-cyan-600 text-xs font-bold hover:text-cyan-700"
+            >
+              Reset tool
+            </button>
+          )}
         </div>
-        <ToolDemo subjectName={subject.name} activeTool={activeTool} textColor={textColor} mutedColor={mutedColor} />
+        {isCalculator ? (
+          <SimpleCalculator />
+        ) : (
+          <textarea
+            className="w-full min-h-[90px] bg-transparent focus:outline-none text-sm text-inherit font-mono"
+            placeholder={`Use ${activeTool} for ${subject.name} here...`}
+            value={draftsByTool[activeTool] ?? ''}
+            onChange={(e) => setDraftsByTool((prev) => ({ ...prev, [activeTool]: e.target.value }))}
+          />
+        )}
       </div>
-    </div>
-  );
-}
-
-function ToolDemo({ subjectName, activeTool, textColor, mutedColor }: { subjectName: string; activeTool: string; textColor: string; mutedColor: string }) {
-  if (/calculator|equation|converter|balancing/i.test(activeTool)) {
-    return (
-      <div className="grid grid-cols-3 gap-2">
-        {['x² + 5x + 6 = 0', 'y = mx + c', 'F = ma'].map((formula) => (
-          <button key={formula} className="px-3 py-2 rounded-lg bg-blue-500/10 border border-blue-500/20 text-blue-600 text-xs font-bold text-left">
-            {formula}
-          </button>
-        ))}
-      </div>
-    );
-  }
-  if (/coding|syntax|algorithm|flowchart/i.test(activeTool)) {
-    return (
-      <pre className="text-xs text-cyan-500 overflow-x-auto">
-{`function solve(problem) {
-  const steps = decompose(problem);
-  return steps.map(explain);
-}`}
-      </pre>
-    );
-  }
-  if (/writing|essay|insha|journal|reflection/i.test(activeTool)) {
-    return <textarea className="w-full min-h-[80px] bg-transparent focus:outline-none text-sm text-inherit" placeholder={`Draft your ${subjectName} response here...`} />;
-  }
-  return (
-    <div>
-      <p className={`text-sm font-semibold ${textColor}`}>Interactive {activeTool}</p>
-      <p className={`text-xs mt-1 ${mutedColor}`}>This mock tool is ready for backend data, file storage, AI feedback, and lesson context.</p>
     </div>
   );
 }

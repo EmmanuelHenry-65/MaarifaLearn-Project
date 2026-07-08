@@ -123,7 +123,7 @@ export default function SignupView() {
 
         {error && <p className="text-red-500 text-sm text-center">{error}</p>}
 
-        <AuthButton type="submit">
+        <AuthButton type="submit" disabled={loading}>
           {loading ? "Creating Account..." : "Create Account"}
         </AuthButton>
 
