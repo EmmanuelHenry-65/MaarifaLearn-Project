@@ -6,12 +6,14 @@ import {
   startAttempt,
   submitAttempt,
   getPaperQuestions,
+  getReviewQuestions,
   getAttemptAnswers,
   type ExamPaper,
   type ExamQuestion,
   type AttemptResult,
   type GradedAnswer,
 } from '../services/examinations.service';
+import AuthenticExamPanel from '../components/exams/AuthenticExamPanel';
 import ExamAISidePanel from '../components/exams/ExamAISidePanel';
 import ExamCard from '../components/exams/ExamCard';
 import ExamDashboard from '../components/exams/ExamDashboard';
@@ -22,6 +24,7 @@ import ResultsDashboard from '../components/exams/ResultsDashboard';
 import ReviewPanel from '../components/exams/ReviewPanel';
 import SubjectSelector from '../components/exams/SubjectSelector';
 import FloatingAIButton from '../components/workspace/FloatingAIButton';
+import { forceDownloadUrl } from '../utils/download';
 import { useTheme } from '../context/ThemeContext';
 
 export type ExamMode = 'authentic' | 'guided';
@@ -54,10 +57,12 @@ export default function ExamsView() {
   const [attemptStartedAt, setAttemptStartedAt] = useState<number | null>(null);
   const [attemptResult, setAttemptResult] = useState<AttemptResult | null>(null);
   const [gradedAnswers, setGradedAnswers] = useState<GradedAnswer[]>([]);
+  const [reviewQuestions, setReviewQuestions] = useState<ExamQuestion[]>([]);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [flags, setFlags] = useState<Record<string, boolean>>({});
   const [questionBookmarks, setQuestionBookmarks] = useState<Record<string, boolean>>({});
   const [aiOpen, setAiOpen] = useState(false);
+  const [showAuthenticPanel, setShowAuthenticPanel] = useState(false);
   const [currentQuestion, setCurrentQuestion] = useState<ExamQuestion | undefined>();
   const [notice, setNotice] = useState('');
 
@@ -120,6 +125,7 @@ export default function ExamsView() {
   const previewPaper = async (paper: ExamPaper) => {
     setActivePaper(paper);
     setScreen('mode-select');
+    setShowAuthenticPanel(false);
     try {
       setActiveQuestions(await getPaperQuestions(paper.id));
     } catch {
@@ -156,7 +162,12 @@ export default function ExamsView() {
     try {
       const result = await submitAttempt(attemptId, answers);
       setAttemptResult(result);
-      setGradedAnswers(await getAttemptAnswers(attemptId));
+      const [graded, review] = await Promise.all([
+        getAttemptAnswers(attemptId),
+        getReviewQuestions(attemptId).catch(() => activeQuestions),
+      ]);
+      setGradedAnswers(graded);
+      setReviewQuestions(review);
       setScreen('results');
       refresh();
     } catch {
@@ -169,7 +180,7 @@ export default function ExamsView() {
       setNotice(`${paper.title}: PDF not uploaded yet.`);
       return;
     }
-    setNotice(`Downloading ${paper.title}...`);
+    window.open(forceDownloadUrl(paper.pdfUrl, `${paper.title}.pdf`), '_blank', 'noopener,noreferrer');
   };
 
   const toggleFlag = (questionId: string) => setFlags((prev) => ({ ...prev, [questionId]: !prev[questionId] }));
@@ -252,19 +263,54 @@ export default function ExamsView() {
           <p className="text-cyan-600 text-xs font-bold uppercase">Choose Exam Mode</p>
           <h2 className={`text-2xl font-extrabold mt-1 ${textColor}`}>{activePaper.title}</h2>
           <p className={`text-sm mt-1 ${mutedColor}`}>{activePaper.year} • {activePaper.term} • {activePaper.durationMinutes} min • {activePaper.totalMarks} marks</p>
-          <div className="grid grid-cols-2 gap-4 mt-5">
-            <button onClick={() => startExam(activePaper, 'authentic')} className="text-left glass-card p-5 hover:border-cyan-500/30 transition-all">
-              <h3 className={`font-bold text-lg ${textColor}`}>Authentic Examination Mode</h3>
-              <p className={`text-sm mt-2 ${mutedColor}`}>A real examination simulation with no AI help, no hints, and no explanations until submission.</p>
-              <span className="inline-flex mt-4 px-4 py-2 rounded-lg bg-blue-500 text-white text-xs font-bold">Start Authentic Exam</span>
-            </button>
-            <button onClick={() => startExam(activePaper, 'guided')} className="text-left glass-card p-5 hover:border-purple-500/30 transition-all">
-              <h3 className={`font-bold text-lg ${textColor}`}>AI Guided Examination</h3>
-              <p className={`text-sm mt-2 ${mutedColor}`}>A Socratic AI Tutor guides your thinking without directly revealing answers.</p>
-              <span className="inline-flex mt-4 px-4 py-2 rounded-lg bg-purple-500 text-white text-xs font-bold">Start AI Walkthrough</span>
-            </button>
-          </div>
-          <button onClick={() => setScreen('list')} className="mt-4 text-cyan-600 text-xs font-bold">Back to papers</button>
+
+          {!showAuthenticPanel ? (
+            <>
+              {activePaper.questionCount === 0 && (
+                <div className="mt-4 px-4 py-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-600 text-xs font-semibold">
+                  This paper has no on-screen interactive questions — it's a downloadable exam only. Use "Authentic Paper Exam" below.
+                </div>
+              )}
+              <div className="grid grid-cols-3 gap-4 mt-5">
+                <button
+                  onClick={() => startExam(activePaper, 'authentic')}
+                  disabled={activePaper.questionCount === 0}
+                  className="text-left glass-card p-5 hover:border-cyan-500/30 transition-all disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:border-transparent"
+                >
+                  <h3 className={`font-bold text-lg ${textColor}`}>Quick Practice — No AI Help</h3>
+                  <p className={`text-sm mt-2 ${mutedColor}`}>Answer on-screen, auto-graded instantly. No hints, no explanations until you submit.</p>
+                  <span className="inline-flex mt-4 px-4 py-2 rounded-lg bg-blue-500 text-white text-xs font-bold">Start Quick Practice</span>
+                </button>
+                <button
+                  onClick={() => startExam(activePaper, 'guided')}
+                  disabled={activePaper.questionCount === 0}
+                  className="text-left glass-card p-5 hover:border-purple-500/30 transition-all disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:border-transparent"
+                >
+                  <h3 className={`font-bold text-lg ${textColor}`}>Quick Practice — AI Guided</h3>
+                  <p className={`text-sm mt-2 ${mutedColor}`}>Answer on-screen with a Socratic AI Tutor guiding your thinking, without revealing answers.</p>
+                  <span className="inline-flex mt-4 px-4 py-2 rounded-lg bg-purple-500 text-white text-xs font-bold">Start AI Walkthrough</span>
+                </button>
+                <button onClick={() => setShowAuthenticPanel(true)} className="text-left glass-card p-5 hover:border-green-500/30 transition-all">
+                  <h3 className={`font-bold text-lg ${textColor}`}>Authentic Paper Exam</h3>
+                  <p className={`text-sm mt-2 ${mutedColor}`}>Download the real exam paper, complete it offline like the real thing, then upload it for AI marking.</p>
+                  <span className="inline-flex mt-4 px-4 py-2 rounded-lg bg-green-500 text-white text-xs font-bold">Download & Submit</span>
+                </button>
+              </div>
+              <button onClick={() => setScreen('list')} className="mt-4 text-cyan-600 text-xs font-bold">Back to papers</button>
+            </>
+          ) : (
+            <div className="mt-5">
+              {user && <AuthenticExamPanel paper={activePaper} userId={user.id} />}
+              <button onClick={() => setShowAuthenticPanel(false)} className="mt-4 text-cyan-600 text-xs font-bold">Back to mode selection</button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {screen === 'attempt' && activePaper && activeQuestions.length === 0 && (
+        <div className="glass-card p-10 text-center">
+          <p className={`font-bold ${textColor}`}>This paper has no interactive questions to practice.</p>
+          <button onClick={() => setScreen('mode-select')} className="mt-3 text-cyan-600 text-xs font-bold">Back to mode selection</button>
         </div>
       )}
 
@@ -301,7 +347,7 @@ export default function ExamsView() {
       {screen === 'review' && activePaper && (
         <ReviewPanel
           paper={activePaper}
-          questions={activeQuestions}
+          questions={reviewQuestions.length ? reviewQuestions : activeQuestions}
           answers={answers}
           gradedAnswers={gradedAnswers}
           onBackToResults={() => setScreen('results')}
@@ -310,7 +356,7 @@ export default function ExamsView() {
       )}
 
       <FloatingAIButton isOpen={aiOpen} onClick={() => setAiOpen((value) => !value)} />
-      <ExamAISidePanel open={aiOpen} subject={currentSubject} paper={activePaper} question={currentQuestion} mode={examMode} progress={progress} onClose={() => setAiOpen(false)} />
+      <ExamAISidePanel open={aiOpen} subject={currentSubject} paper={activePaper} question={currentQuestion} mode={examMode} progress={progress} userId={user?.id ?? null} onClose={() => setAiOpen(false)} />
     </div>
   );
 }

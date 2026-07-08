@@ -1,35 +1,55 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import type { WorkspaceLesson, WorkspaceMode, WorkspaceSubject, WorkspaceTopic } from '../../data/workspaceData';
+import type {
+  BookmarkedTopic,
+  SubjectPastQuestion,
+  SubjectProgressSummary,
+  SubjectResource,
+  WorkspaceNoteRow,
+} from '../../services/learning.service';
+import {
+  createNote,
+  deleteNote,
+  getSubjectBookmarkedTopics,
+  getSubjectPastQuestions,
+  getTopicNotes,
+  toggleNotePinned,
+} from '../../services/learning.service';
 import { useTheme } from '../../context/ThemeContext';
-
-interface WorkspaceNote {
-  id: string;
-  title: string;
-  content: string;
-  pinned: boolean;
-  bookmarked: boolean;
-}
+import { forceDownloadUrl } from '../../utils/download';
+import VideoModal from '../common/VideoModal';
 
 interface LessonContentProps {
   subject: WorkspaceSubject;
   activeMode: WorkspaceMode;
   activeLesson?: WorkspaceLesson;
   activeTopic?: WorkspaceTopic;
+  resources: SubjectResource[];
+  resourcesLoading: boolean;
+  userId: string | null;
+  resolvedTopicId: string | null;
+  progressSummary: SubjectProgressSummary | null;
+  progressLoading: boolean;
   progressBump: number;
   onProgressBump: () => void;
 }
 
-export default function LessonContent({ subject, activeMode, activeLesson, activeTopic, progressBump, onProgressBump }: LessonContentProps) {
+export default function LessonContent({
+  subject,
+  activeMode,
+  activeLesson,
+  activeTopic,
+  resources,
+  resourcesLoading,
+  userId,
+  resolvedTopicId,
+  progressSummary,
+  progressLoading,
+  progressBump,
+  onProgressBump,
+}: LessonContentProps) {
   const { theme } = useTheme();
-  const [notes, setNotes] = useState<WorkspaceNote[]>([
-    { id: 'note-1', title: 'Key idea', content: `Remember the core concept for ${activeLesson?.title ?? subject.name}.`, pinned: true, bookmarked: true },
-    { id: 'note-2', title: 'Question for AI', content: 'Ask for a simpler explanation and two examples.', pinned: false, bookmarked: false },
-  ]);
-  const [draft, setDraft] = useState('');
-  const [flashIndex, setFlashIndex] = useState(0);
-  const [flipped, setFlipped] = useState(false);
-  const [practiceTab, setPracticeTab] = useState<'quiz' | 'questions' | 'examples' | 'challenge' | 'reflection' | 'assessment'>('quiz');
-  const [selectedAnswers, setSelectedAnswers] = useState<Record<string, string>>({});
 
   const textColor = theme === 'light' ? 'text-slate-900' : 'text-white';
   const mutedColor = theme === 'light' ? 'text-slate-500' : 'text-gray-400';
@@ -40,11 +60,11 @@ export default function LessonContent({ subject, activeMode, activeLesson, activ
   const currentLesson = activeLesson ?? subject.units[0].lessons[0];
   const currentTopic = activeTopic ?? currentLesson.topics[0];
 
-  const flashcards = useMemo(() => [
-    { q: `What is the main idea in ${currentTopic.title}?`, a: currentTopic.summary },
-    { q: `How does ${currentTopic.title} connect to CBE skills?`, a: 'It builds problem solving, communication, and self-directed learning.' },
-    { q: 'What should I practice next?', a: `Complete a quick quiz and one worked example from ${currentLesson.title}.` },
-  ], [currentLesson.title, currentTopic.summary, currentTopic.title]);
+  const masteryPercent = progressSummary
+    ? progressSummary.totalTopics
+      ? Math.round((progressSummary.topicsCompleted / progressSummary.totalTopics) * 100)
+      : 0
+    : Math.min(100, subject.progress + progressBump);
 
   if (activeMode === 'overview') {
     return (
@@ -53,10 +73,13 @@ export default function LessonContent({ subject, activeMode, activeLesson, activ
           <h3 className={`font-bold text-lg ${textColor}`}>Syllabus Overview</h3>
           <p className={`mt-2 text-sm leading-relaxed ${mutedColor}`}>{subject.syllabus}</p>
           <div className="mt-4 grid grid-cols-4 gap-3">
-            <Metric title="Lessons" value={`${subject.lessonsCompleted}/${subject.totalLessons}`} />
-            <Metric title="Study Time" value={subject.studyTime} />
-            <Metric title="Mastery" value={`${Math.min(100, subject.progress + progressBump)}%`} />
-            <Metric title="Achievements" value="6" />
+            <Metric
+              title="Topics"
+              value={progressLoading ? '…' : progressSummary ? `${progressSummary.topicsCompleted}/${progressSummary.totalTopics}` : `${subject.lessonsCompleted}/${subject.totalLessons}`}
+            />
+            <Metric title="Started" value={progressLoading ? '…' : progressSummary ? `${progressSummary.topicsStarted}` : '—'} />
+            <Metric title="Mastery" value={progressLoading ? '…' : progressSummary ? `${progressSummary.averageMastery}%` : `${masteryPercent}%`} />
+            <Metric title="Last Studied" value={progressLoading ? '…' : formatRelative(progressSummary?.lastAccessedAt ?? null)} />
           </div>
         </div>
         <div className="grid grid-cols-2 gap-4">
@@ -123,89 +146,340 @@ export default function LessonContent({ subject, activeMode, activeLesson, activ
 
   if (activeMode === 'notes') {
     return (
+      <NotesPanel
+        userId={userId}
+        topicId={resolvedTopicId}
+        topicLabel={currentLesson.title}
+        textColor={textColor}
+        mutedColor={mutedColor}
+        panelBg={panelBg}
+        softBg={softBg}
+      />
+    );
+  }
+
+  if (activeMode === 'flashcards') {
+    return <EmptyStatePanel title="Flashcards" textColor={textColor} mutedColor={mutedColor} message="AI-generated flashcards for this topic aren't built yet — this needs the flashcard-generation pipeline wired up before it can show real content." />;
+  }
+
+  if (activeMode === 'practice') {
+    return <EmptyStatePanel title="Practice" textColor={textColor} mutedColor={mutedColor} message="Real practice questions for this topic aren't available yet. Try Past Questions for real exam questions on this subject in the meantime." />;
+  }
+
+  if (activeMode === 'worksheets') {
+    return <EmptyStatePanel title="Worksheets" textColor={textColor} mutedColor={mutedColor} message={`No worksheet files have been uploaded for ${subject.name} yet.`} />;
+  }
+
+  if (activeMode === 'videos' || activeMode === 'resources') {
+    const filtered = resources.filter((r) => (activeMode === 'videos' ? r.resourceType === 'video' : r.resourceType !== 'video'));
+    return <ResourcePanel mode={activeMode} subject={subject} items={filtered} loading={resourcesLoading} textColor={textColor} mutedColor={mutedColor} panelBg={panelBg} />;
+  }
+
+  if (activeMode === 'past-questions') {
+    return <PastQuestionsPanel subject={subject} textColor={textColor} mutedColor={mutedColor} panelBg={panelBg} />;
+  }
+
+  if (activeMode === 'bookmarks') {
+    return <BookmarksPanel userId={userId} subject={subject} textColor={textColor} mutedColor={mutedColor} panelBg={panelBg} />;
+  }
+
+  if (activeMode === 'progress') {
+    return (
       <div className="glass-card p-5">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className={`font-bold text-lg ${textColor}`}>Lesson Notes</h3>
-          <button
-            onClick={() => {
-              if (!draft.trim()) return;
-              setNotes((prev) => [{ id: crypto.randomUUID(), title: `Note ${prev.length + 1}`, content: draft, pinned: false, bookmarked: false }, ...prev]);
-              setDraft('');
-            }}
-            className="px-4 py-2 rounded-lg bg-cyan-500/10 border border-cyan-500/20 text-cyan-600 text-xs font-bold"
-          >
-            Add Note
-          </button>
-        </div>
-        <textarea value={draft} onChange={(e) => setDraft(e.target.value)} placeholder="Create a note from this lesson..." className={`w-full min-h-[90px] rounded-xl border p-3 text-sm focus:outline-none focus:border-cyan-500/40 ${panelBg}`} />
+        <h3 className={`font-bold text-lg mb-4 ${textColor}`}>Progress Dashboard</h3>
+        {progressLoading ? (
+          <p className={`text-sm ${mutedColor}`}>Loading...</p>
+        ) : progressSummary ? (
+          <div className="grid grid-cols-2 gap-3">
+            <Metric title="Topics Completed" value={`${progressSummary.topicsCompleted}/${progressSummary.totalTopics}`} />
+            <Metric title="Topics Started" value={`${progressSummary.topicsStarted}/${progressSummary.totalTopics}`} />
+            <Metric title="Average Mastery" value={`${progressSummary.averageMastery}%`} />
+            <Metric title="Last Studied" value={formatRelative(progressSummary.lastAccessedAt)} />
+          </div>
+        ) : (
+          <p className={`text-sm ${mutedColor}`}>No progress recorded yet — open a lesson to get started.</p>
+        )}
+      </div>
+    );
+  }
+
+  return null;
+}
+
+function formatRelative(iso: string | null): string {
+  if (!iso) return 'Never';
+  const diffMs = Date.now() - new Date(iso).getTime();
+  const diffMins = Math.round(diffMs / 60000);
+  if (diffMins < 1) return 'Just now';
+  if (diffMins < 60) return `${diffMins}m ago`;
+  const diffHours = Math.round(diffMins / 60);
+  if (diffHours < 24) return `${diffHours}h ago`;
+  return `${Math.round(diffHours / 24)}d ago`;
+}
+
+function NotesPanel({
+  userId,
+  topicId,
+  topicLabel,
+  textColor,
+  mutedColor,
+  panelBg,
+  softBg,
+}: {
+  userId: string | null;
+  topicId: string | null;
+  topicLabel: string;
+  textColor: string;
+  mutedColor: string;
+  panelBg: string;
+  softBg: string;
+}) {
+  const [notes, setNotes] = useState<WorkspaceNoteRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [draft, setDraft] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (!userId || !topicId) {
+      setNotes([]);
+      setLoading(false);
+      return;
+    }
+    let cancelled = false;
+    setLoading(true);
+    getTopicNotes(userId, topicId)
+      .then((rows) => !cancelled && setNotes(rows))
+      .catch(() => !cancelled && setNotes([]))
+      .finally(() => !cancelled && setLoading(false));
+    return () => {
+      cancelled = true;
+    };
+  }, [userId, topicId]);
+
+  const addNote = async () => {
+    if (!draft.trim() || !userId || !topicId) return;
+    setSaving(true);
+    try {
+      const note = await createNote(userId, topicId, `Note ${notes.length + 1}`, draft.trim());
+      setNotes((prev) => [note, ...prev]);
+      setDraft('');
+    } catch {
+      // best-effort -- leave the draft in place so the learner doesn't lose it
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const togglePin = async (note: WorkspaceNoteRow) => {
+    setNotes((prev) => prev.map((n) => (n.id === note.id ? { ...n, pinned: !n.pinned } : n)));
+    await toggleNotePinned(note.id, !note.pinned).catch(() => {});
+  };
+
+  const remove = async (noteId: string) => {
+    setNotes((prev) => prev.filter((n) => n.id !== noteId));
+    await deleteNote(noteId).catch(() => {});
+  };
+
+  return (
+    <div className="glass-card p-5">
+      <div className="flex items-center justify-between mb-4">
+        <h3 className={`font-bold text-lg ${textColor}`}>Notes — {topicLabel}</h3>
+        <button onClick={addNote} disabled={saving || !draft.trim()} className="px-4 py-2 rounded-lg bg-cyan-500/10 border border-cyan-500/20 text-cyan-600 text-xs font-bold disabled:opacity-40">
+          {saving ? 'Saving...' : 'Add Note'}
+        </button>
+      </div>
+      <textarea
+        value={draft}
+        onChange={(e) => setDraft(e.target.value)}
+        placeholder="Create a note from this lesson..."
+        className={`w-full min-h-[90px] rounded-xl border p-3 text-sm focus:outline-none focus:border-cyan-500/40 ${panelBg}`}
+      />
+      {loading ? (
+        <p className={`text-sm mt-4 ${mutedColor}`}>Loading...</p>
+      ) : notes.length === 0 ? (
+        <p className={`text-sm mt-4 ${mutedColor}`}>No notes yet for this topic — add one above.</p>
+      ) : (
         <div className="mt-4 grid grid-cols-2 gap-3">
           {notes.map((note) => (
             <div key={note.id} className={`rounded-xl border p-3 ${softBg}`}>
               <div className="flex items-center justify-between mb-2">
                 <p className={`font-bold text-sm ${textColor}`}>{note.pinned ? '📌 ' : ''}{note.title}</p>
-                <div className="flex gap-1">
-                  <button onClick={() => setNotes((prev) => prev.map((n) => n.id === note.id ? { ...n, pinned: !n.pinned } : n))} className="text-cyan-600 text-xs font-bold">Pin</button>
-                  <button onClick={() => setNotes((prev) => prev.map((n) => n.id === note.id ? { ...n, bookmarked: !n.bookmarked } : n))} className="text-purple-600 text-xs font-bold">{note.bookmarked ? 'Saved' : 'Save'}</button>
-                  <button onClick={() => setNotes((prev) => prev.filter((n) => n.id !== note.id))} className="text-red-500 text-xs font-bold">Delete</button>
+                <div className="flex gap-2">
+                  <button onClick={() => togglePin(note)} className="text-cyan-600 text-xs font-bold">{note.pinned ? 'Unpin' : 'Pin'}</button>
+                  <button onClick={() => remove(note.id)} className="text-red-500 text-xs font-bold">Delete</button>
                 </div>
               </div>
               <p className={`text-xs leading-relaxed ${mutedColor}`}>{note.content}</p>
             </div>
           ))}
         </div>
-      </div>
-    );
-  }
+      )}
+    </div>
+  );
+}
 
-  if (activeMode === 'flashcards') {
-    const current = flashcards[flashIndex];
-    return (
-      <div className="glass-card p-5">
-        <h3 className={`font-bold text-lg mb-4 ${textColor}`}>Interactive Flashcards</h3>
-        <button onClick={() => setFlipped((value) => !value)} className={`w-full min-h-[220px] rounded-2xl border p-8 text-center ${panelBg}`}>
-          <p className="text-cyan-600 text-xs font-bold uppercase mb-3">{flipped ? 'Answer' : 'Question'}</p>
-          <p className={`text-xl font-extrabold ${textColor}`}>{flipped ? current.a : current.q}</p>
-          <p className={`text-xs mt-4 ${mutedColor}`}>Click card to flip</p>
-        </button>
-        <div className="flex justify-center gap-2 mt-4">
-          <button onClick={() => { setFlipped(false); setFlashIndex((flashIndex + flashcards.length - 1) % flashcards.length); }} className="px-4 py-2 rounded-lg bg-cyan-500/10 text-cyan-600 text-xs font-bold">Previous</button>
-          <button onClick={() => { setFlipped(false); setFlashIndex((flashIndex + 1) % flashcards.length); onProgressBump(); }} className="px-4 py-2 rounded-lg bg-cyan-500 text-white text-xs font-bold">Next Card</button>
+function PastQuestionsPanel({ subject, textColor, mutedColor, panelBg }: { subject: WorkspaceSubject; textColor: string; mutedColor: string; panelBg: string }) {
+  const [questions, setQuestions] = useState<SubjectPastQuestion[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    getSubjectPastQuestions(subject.id)
+      .then((rows) => !cancelled && setQuestions(rows))
+      .catch(() => !cancelled && setQuestions([]))
+      .finally(() => !cancelled && setLoading(false));
+    return () => {
+      cancelled = true;
+    };
+  }, [subject.id]);
+
+  return (
+    <div className="glass-card p-5">
+      <div className="flex items-center justify-between mb-4">
+        <div>
+          <h3 className={`font-bold text-lg ${textColor}`}>Past Questions</h3>
+          <p className={`text-xs mt-1 ${mutedColor}`}>Real questions pulled from {subject.name}'s past papers.</p>
         </div>
+        <Link to="/exams" className="px-3 py-2 rounded-lg bg-cyan-500/10 border border-cyan-500/20 text-cyan-600 text-xs font-bold">Open Exam Center</Link>
       </div>
-    );
-  }
-
-  if (activeMode === 'practice') {
-    const tabs = [
-      ['quiz', 'Quick Quiz'], ['questions', 'Practice Questions'], ['examples', 'Worked Examples'], ['challenge', 'Challenge'], ['reflection', 'Reflection'], ['assessment', 'Self Assessment'],
-    ] as const;
-    return (
-      <div className="glass-card p-5">
-        <div className="flex flex-wrap gap-2 mb-4">
-          {tabs.map(([id, label]) => (
-            <button key={id} onClick={() => setPracticeTab(id)} className={`px-3 py-2 rounded-lg border text-xs font-bold ${practiceTab === id ? 'bg-cyan-500 text-white border-cyan-500' : 'bg-cyan-500/10 text-cyan-600 border-cyan-500/20'}`}>{label}</button>
+      {loading ? (
+        <p className={`text-sm ${mutedColor}`}>Loading...</p>
+      ) : questions.length === 0 ? (
+        <p className={`text-sm ${mutedColor}`}>No past-paper questions found for {subject.name} yet.</p>
+      ) : (
+        <div className="space-y-2">
+          {questions.map((q) => (
+            <div key={q.id} className={`rounded-xl border p-3 ${panelBg}`}>
+              <p className={`text-sm font-semibold ${textColor}`}>{q.questionText}</p>
+              <p className={`text-xs mt-1 ${mutedColor}`}>From {q.paperTitle}</p>
+            </div>
           ))}
         </div>
-        <div className={`rounded-xl border p-4 ${panelBg}`}>
-          <h3 className={`font-bold text-lg ${textColor}`}>{tabs.find(([id]) => id === practiceTab)?.[1]}</h3>
-          <p className={`text-sm mt-1 ${mutedColor}`}>Complete this activity to update your mock mastery score.</p>
-          <div className="mt-4 space-y-3">
-            {['A', 'B', 'C'].map((choice) => (
-              <button
-                key={choice}
-                onClick={() => { setSelectedAnswers((prev) => ({ ...prev, [practiceTab]: choice })); onProgressBump(); }}
-                className={`w-full text-left px-4 py-3 rounded-xl border text-sm font-semibold ${selectedAnswers[practiceTab] === choice ? 'bg-green-500/10 border-green-500/30 text-green-600' : softBg}`}
-              >
-                {choice}. {practiceTab === 'examples' ? 'Show guided solution step' : `Interactive ${practiceTab} response option`}
-              </button>
-            ))}
-          </div>
+      )}
+    </div>
+  );
+}
+
+function BookmarksPanel({ userId, subject, textColor, mutedColor, panelBg }: { userId: string | null; subject: WorkspaceSubject; textColor: string; mutedColor: string; panelBg: string }) {
+  const [bookmarks, setBookmarks] = useState<BookmarkedTopic[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!userId) {
+      setBookmarks([]);
+      setLoading(false);
+      return;
+    }
+    let cancelled = false;
+    setLoading(true);
+    getSubjectBookmarkedTopics(userId, subject.id)
+      .then((rows) => !cancelled && setBookmarks(rows))
+      .catch(() => !cancelled && setBookmarks([]))
+      .finally(() => !cancelled && setLoading(false));
+    return () => {
+      cancelled = true;
+    };
+  }, [userId, subject.id]);
+
+  return (
+    <div className="glass-card p-5">
+      <h3 className={`font-bold text-lg mb-4 ${textColor}`}>Bookmarked Topics</h3>
+      {loading ? (
+        <p className={`text-sm ${mutedColor}`}>Loading...</p>
+      ) : bookmarks.length === 0 ? (
+        <p className={`text-sm ${mutedColor}`}>No bookmarked topics yet for {subject.name}.</p>
+      ) : (
+        <div className="grid grid-cols-2 gap-3">
+          {bookmarks.map((b) => (
+            <div key={b.bookmarkId} className={`rounded-xl border p-3 ${panelBg}`}>
+              <p className={`font-bold text-sm ${textColor}`}>{b.topicTitle}</p>
+              <p className={`text-xs mt-1 ${mutedColor}`}>{b.lessonTitle}</p>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function EmptyStatePanel({ title, message, textColor, mutedColor }: { title: string; message: string; textColor: string; mutedColor: string }) {
+  return (
+    <div className="glass-card p-5">
+      <h3 className={`font-bold text-lg mb-2 ${textColor}`}>{title}</h3>
+      <p className={`text-sm ${mutedColor}`}>{message}</p>
+    </div>
+  );
+}
+
+function ResourcePanel({
+  mode,
+  subject,
+  items,
+  loading,
+  textColor,
+  mutedColor,
+  panelBg,
+}: {
+  mode: 'videos' | 'resources';
+  subject: WorkspaceSubject;
+  items: SubjectResource[];
+  loading: boolean;
+  textColor: string;
+  mutedColor: string;
+  panelBg: string;
+}) {
+  const title = mode === 'videos' ? 'Subject Videos' : 'Learning Resources';
+  const [playing, setPlaying] = useState<SubjectResource | null>(null);
+
+  return (
+    <div className="glass-card p-5">
+      <div className="flex items-center justify-between mb-4">
+        <div>
+          <h3 className={`font-bold text-lg ${textColor}`}>{title}</h3>
+          <p className={`text-xs mt-1 ${mutedColor}`}>Real {mode === 'videos' ? 'videos' : 'materials'} for {subject.name}.</p>
         </div>
       </div>
-    );
-  }
 
-  return <GenericPanel mode={activeMode} subject={subject} textColor={textColor} mutedColor={mutedColor} panelBg={panelBg} onProgressBump={onProgressBump} />;
+      {loading ? (
+        <p className={`text-sm ${mutedColor}`}>Loading...</p>
+      ) : items.length === 0 ? (
+        <p className={`text-sm ${mutedColor}`}>No {mode === 'videos' ? 'videos' : 'resources'} uploaded for {subject.name} yet.</p>
+      ) : (
+        <div className="grid grid-cols-3 gap-3">
+          {items.map((item) => {
+            const isVideo = item.resourceType === 'video';
+            const cardClasses = `text-left rounded-xl border p-4 block w-full ${panelBg} hover:border-cyan-500/30 transition-all ${item.url ? '' : 'pointer-events-none opacity-50'}`;
+            const inner = (
+              <>
+                <span className="w-9 h-9 rounded-xl bg-cyan-500/10 border border-cyan-500/20 text-cyan-600 flex items-center justify-center mb-3 font-bold">
+                  {isVideo ? '▶' : '📄'}
+                </span>
+                <p className={`font-bold text-sm ${textColor}`}>{item.title}</p>
+                <p className={`text-xs mt-1 ${mutedColor}`}>{isVideo ? 'Watch now' : 'Download PDF'}</p>
+              </>
+            );
+
+            if (isVideo) {
+              return (
+                <button key={item.id} onClick={() => item.url && setPlaying(item)} className={cardClasses}>
+                  {inner}
+                </button>
+              );
+            }
+
+            return (
+              <a key={item.id} href={item.url ? forceDownloadUrl(item.url, `${item.title}.pdf`) : undefined} target="_blank" rel="noopener noreferrer" className={cardClasses}>
+                {inner}
+              </a>
+            );
+          })}
+        </div>
+      )}
+
+      {playing?.url && <VideoModal title={playing.title} url={playing.url} onClose={() => setPlaying(null)} />}
+    </div>
+  );
 }
 
 function Metric({ title, value }: { title: string; value: string }) {
@@ -231,39 +505,6 @@ function ListPanel({ title, items }: { title: string; items: string[] }) {
             <span className="mt-1 w-2 h-2 rounded-full bg-cyan-500 flex-shrink-0" />
             <p className={`text-sm ${mutedColor}`}>{item}</p>
           </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function GenericPanel({ mode, subject, textColor, mutedColor, panelBg, onProgressBump }: { mode: WorkspaceMode; subject: WorkspaceSubject; textColor: string; mutedColor: string; panelBg: string; onProgressBump: () => void }) {
-  const labels: Record<string, string> = {
-    videos: 'Subject Videos',
-    worksheets: 'Worksheets',
-    resources: 'Learning Resources',
-    'past-questions': 'Past Questions',
-    bookmarks: 'Bookmarked Content',
-    progress: 'Progress Dashboard',
-  };
-
-  const items = mode === 'progress'
-    ? ['Completed lessons: 24', 'Completed topics: 62', 'Study streak: 7 days', 'Mastery: 82%', 'Weekly activity: 4h 30m']
-    : [`${subject.name} ${labels[mode] ?? mode} 1`, `${subject.name} ${labels[mode] ?? mode} 2`, `${subject.name} ${labels[mode] ?? mode} 3`];
-
-  return (
-    <div className="glass-card p-5">
-      <div className="flex items-center justify-between mb-4">
-        <h3 className={`font-bold text-lg ${textColor}`}>{labels[mode] ?? 'Workspace Panel'}</h3>
-        <button onClick={onProgressBump} className="px-3 py-2 rounded-lg bg-cyan-500/10 border border-cyan-500/20 text-cyan-600 text-xs font-bold">Refresh</button>
-      </div>
-      <div className="grid grid-cols-3 gap-3">
-        {items.map((item, index) => (
-          <button key={item} onClick={onProgressBump} className={`text-left rounded-xl border p-4 ${panelBg} hover:border-cyan-500/30 transition-all`}>
-            <span className="w-9 h-9 rounded-xl bg-cyan-500/10 border border-cyan-500/20 text-cyan-600 flex items-center justify-center mb-3 font-bold">{index + 1}</span>
-            <p className={`font-bold text-sm ${textColor}`}>{item}</p>
-            <p className={`text-xs mt-1 ${mutedColor}`}>Open, review, complete, bookmark, or ask AI about this item.</p>
-          </button>
         ))}
       </div>
     </div>

@@ -1,4 +1,5 @@
 import type { WorkspaceLesson, WorkspaceMode, WorkspaceSubject, WorkspaceTopic } from '../../data/workspaceData';
+import type { TopicProgressBySlug } from '../../services/learning.service';
 import { useTheme } from '../../context/ThemeContext';
 
 interface SubjectSidebarProps {
@@ -8,6 +9,7 @@ interface SubjectSidebarProps {
   activeLessonId?: string;
   activeTopicId?: string;
   query: string;
+  topicProgress: TopicProgressBySlug;
   onToggleCollapsed: () => void;
   onModeChange: (mode: WorkspaceMode) => void;
   onSelectLesson: (lesson: WorkspaceLesson, topic?: WorkspaceTopic) => void;
@@ -33,6 +35,7 @@ export default function SubjectSidebar({
   activeLessonId,
   activeTopicId,
   query,
+  topicProgress,
   onToggleCollapsed,
   onModeChange,
   onSelectLesson,
@@ -41,6 +44,9 @@ export default function SubjectSidebar({
   const textColor = theme === 'light' ? 'text-slate-900' : 'text-white';
   const mutedColor = theme === 'light' ? 'text-slate-500' : 'text-gray-500';
   const surface = theme === 'light' ? 'bg-white border-slate-200' : 'bg-[rgba(17,24,50,0.55)] border-[rgba(56,78,135,0.18)]';
+
+  const isLessonComplete = (lesson: WorkspaceLesson) =>
+    lesson.topics.length > 0 && lesson.topics.every((topic) => topicProgress[topic.id]?.completed);
 
   const normalizedQuery = query.trim().toLowerCase();
   const visibleUnits = subject.units
@@ -101,7 +107,7 @@ export default function SubjectSidebar({
                               : `${mutedColor} hover:text-cyan-600 hover:bg-cyan-500/5`
                           }`}
                         >
-                          {lesson.completed ? '✓' : '○'} {lesson.title}
+                          {isLessonComplete(lesson) ? '✓' : '○'} {lesson.title}
                         </button>
                         <div className="ml-4 mt-1 space-y-1">
                           {lesson.topics.map((topic) => (

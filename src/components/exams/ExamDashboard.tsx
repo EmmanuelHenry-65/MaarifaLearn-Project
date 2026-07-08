@@ -37,20 +37,30 @@ export default function ExamDashboard({ currentSubject, recentExams, recommended
               <h3 className={`font-bold text-base ${textColor}`}>Continue Last Exam</h3>
               <p className={`text-xs mt-1 ${mutedColor}`}>Resume from your last active attempt.</p>
             </div>
-            <button onClick={() => onContinue(continuePaper)} className="px-4 py-2 rounded-lg bg-cyan-500 text-white text-xs font-bold hover:bg-cyan-600">Continue</button>
+            <button
+              onClick={() => continuePaper && onContinue(continuePaper)}
+              disabled={!continuePaper}
+              className="px-4 py-2 rounded-lg bg-cyan-500 text-white text-xs font-bold hover:bg-cyan-600 disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              Continue
+            </button>
           </div>
-          <div className={`rounded-xl border p-4 ${itemBg}`}>
-            <div className="flex items-center justify-between">
-              <div>
-                <p className={`font-bold ${textColor}`}>{continuePaper.title}</p>
-                <p className={`text-xs mt-1 ${mutedColor}`}>{continuePaper.year} • {continuePaper.term} • {continuePaper.durationMinutes} min</p>
+          {continuePaper ? (
+            <div className={`rounded-xl border p-4 ${itemBg}`}>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className={`font-bold ${textColor}`}>{continuePaper.title}</p>
+                  <p className={`text-xs mt-1 ${mutedColor}`}>{continuePaper.year} • {continuePaper.term} • {continuePaper.durationMinutes} min</p>
+                </div>
+                <span className="px-3 py-1 rounded-full bg-cyan-500/10 border border-cyan-500/20 text-cyan-600 text-xs font-bold">{continuePaper.completionStatus}</span>
               </div>
-              <span className="px-3 py-1 rounded-full bg-cyan-500/10 border border-cyan-500/20 text-cyan-600 text-xs font-bold">{continuePaper.completionStatus}</span>
+              <div className="mt-4 h-2 rounded-full bg-slate-200/70 overflow-hidden">
+                <div className="h-full bg-gradient-to-r from-cyan-500 to-blue-500 rounded-full" style={{ width: `${continuePaper.latestScore ?? currentSubject.readiness}%` }} />
+              </div>
             </div>
-            <div className="mt-4 h-2 rounded-full bg-slate-200/70 overflow-hidden">
-              <div className="h-full bg-gradient-to-r from-cyan-500 to-blue-500 rounded-full" style={{ width: `${continuePaper.latestScore ?? currentSubject.readiness}%` }} />
-            </div>
-          </div>
+          ) : (
+            <p className={`text-xs ${mutedColor}`}>No papers yet for this subject.</p>
+          )}
         </div>
 
         <div className="glass-card p-5 col-span-2">

@@ -21,8 +21,8 @@ export interface TutorSession {
   messages: TutorMessage[];
 }
 
-export const PLACEHOLDER_ANSWER =
-  'Thanks for asking! Real AI-powered answers are coming soon — this is a placeholder reply while the AI model integration is being built.';
+export const FALLBACK_ANSWER =
+  "Sorry, I couldn't reach the AI Tutor just now. Please try asking again in a moment.";
 
 const SIGNED_URL_TTL_SECONDS = 60 * 60;
 export const MAX_ATTACHMENT_BYTES = 10 * 1024 * 1024;
@@ -123,9 +123,11 @@ export function isSessionContinuable(session: TutorSession | undefined): session
 }
 
 /**
- * Adds a question (and/or attachment) plus a placeholder assistant reply to
- * a conversation - continuing `existingConversationId` if given, otherwise
- * starting a new conversation first.
+ * Adds a question (and/or attachment) to a conversation, asks the real AI
+ * Tutor (ai-tutor-chat Edge Function -- Socratic RAG over the student's own
+ * uploaded materials) for a reply, and stores both messages - continuing
+ * `existingConversationId` if given, otherwise starting a new conversation
+ * first.
  */
 export async function askTutor(
   userId: string,
@@ -146,32 +148,44 @@ export async function askTutor(
     conversationId = conversation.id;
   }
 
-  const { data: inserted, error: msgError } = await supabase
+  const { data: userRowData, error: userMsgError } = await supabase
     .from('messages')
-    .insert([
-      {
-        conversation_id: conversationId,
-        sender: 'user',
-        content: displayText,
-        attachment_path: attachment?.path ?? null,
-        attachment_name: attachment?.name ?? null,
-      },
-      { conversation_id: conversationId, sender: 'assistant', content: PLACEHOLDER_ANSWER },
-    ])
+    .insert({
+      conversation_id: conversationId,
+      sender: 'user',
+      content: displayText,
+      attachment_path: attachment?.path ?? null,
+      attachment_name: attachment?.name ?? null,
+    })
     .select('id, sender, content, created_at, attachment_path, attachment_name')
-    .returns<RawMessageRow[]>();
-  if (msgError) throw msgError;
+    .single<RawMessageRow>();
+  if (userMsgError) throw userMsgError;
+
+  let answer = FALLBACK_ANSWER;
+  try {
+    const { data, error } = await supabase.functions.invoke<{ answer: string; error?: string }>('ai-tutor-chat', {
+      body: { conversationId, question: displayText, attachmentPath: attachment?.path, attachmentName: attachment?.name },
+    });
+    if (error) throw error;
+    if (data?.answer) answer = data.answer;
+  } catch (err) {
+    console.error('ai-tutor-chat failed:', err);
+  }
+
+  const { data: assistantRowData, error: assistantMsgError } = await supabase
+    .from('messages')
+    .insert({ conversation_id: conversationId, sender: 'assistant', content: answer })
+    .select('id, sender, content, created_at, attachment_path, attachment_name')
+    .single<RawMessageRow>();
+  if (assistantMsgError) throw assistantMsgError;
 
   const signedUrlByPath = new Map<string, string>();
   if (attachment) signedUrlByPath.set(attachment.path, attachment.signedUrl ?? '');
 
-  const userRow = inserted.find((m) => m.sender === 'user')!;
-  const assistantRow = inserted.find((m) => m.sender === 'assistant')!;
-
   return {
     conversationId,
-    userMessage: toTutorMessage(userRow, signedUrlByPath),
-    assistantMessage: toTutorMessage(assistantRow, signedUrlByPath),
+    userMessage: toTutorMessage(userRowData, signedUrlByPath),
+    assistantMessage: toTutorMessage(assistantRowData, signedUrlByPath),
   };
 }
 

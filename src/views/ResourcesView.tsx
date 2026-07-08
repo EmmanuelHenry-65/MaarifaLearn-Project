@@ -3,6 +3,8 @@ import { Link } from 'react-router-dom';
 import { useResourcesData, ResourceType, ResourceSummary } from '../hooks/useResourcesData';
 import { allSubjects } from '../data/subjects';
 import { formatRelativeTime } from '../utils/time';
+import { forceDownloadUrl } from '../utils/download';
+import VideoModal from '../components/common/VideoModal';
 
 const filterTabs = ['All', 'pdf', 'video', 'audio', 'image', 'link'] as const;
 
@@ -95,6 +97,7 @@ export default function ResourcesView() {
   const [showAllRecommended, setShowAllRecommended] = useState(false);
   const featuredSectionRef = useRef<HTMLDivElement>(null);
   const { stats, subjects, featured, recentlyViewed, bookmarkedIds, toggleBookmark, loading, error } = useResourcesData();
+  const [playingVideo, setPlayingVideo] = useState<ResourceSummary | null>(null);
 
   const filteredFeatured = useMemo(() => {
     return featured
@@ -113,9 +116,16 @@ export default function ResourcesView() {
   const popularSubjects = subjects.filter((s) => s.resourceCount > 0).slice(0, 6);
 
   function handleOpenResource(resource: ResourceSummary) {
-    if (resource.url) {
-      window.open(resource.url, '_blank', 'noopener,noreferrer');
+    if (!resource.url) return;
+    if (resource.resourceType === 'video') {
+      setPlayingVideo(resource);
+      return;
     }
+    if (resource.resourceType === 'pdf') {
+      window.open(forceDownloadUrl(resource.url, `${resource.title}.pdf`), '_blank', 'noopener,noreferrer');
+      return;
+    }
+    window.open(resource.url, '_blank', 'noopener,noreferrer');
   }
 
   function scrollToFeatured() {
@@ -387,6 +397,8 @@ export default function ResourcesView() {
         </div>
 
       </div>
+
+      {playingVideo?.url && <VideoModal title={playingVideo.title} url={playingVideo.url} onClose={() => setPlayingVideo(null)} />}
     </div>
   );
 }

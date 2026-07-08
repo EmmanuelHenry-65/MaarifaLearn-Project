@@ -1,4 +1,5 @@
 import type { WorkspaceMode, WorkspaceSubject } from '../../data/workspaceData';
+import type { SubjectProgressSummary } from '../../services/learning.service';
 import { useTheme } from '../../context/ThemeContext';
 
 interface WorkspaceHeaderProps {
@@ -6,6 +7,7 @@ interface WorkspaceHeaderProps {
   activeMode: WorkspaceMode;
   query: string;
   onQueryChange: (value: string) => void;
+  progressSummary?: SubjectProgressSummary | null;
 }
 
 const modeLabels: Record<WorkspaceMode, string> = {
@@ -22,8 +24,16 @@ const modeLabels: Record<WorkspaceMode, string> = {
   progress: 'Progress',
 };
 
-export default function WorkspaceHeader({ subject, activeMode, query, onQueryChange }: WorkspaceHeaderProps) {
+export default function WorkspaceHeader({ subject, activeMode, query, onQueryChange, progressSummary }: WorkspaceHeaderProps) {
   const { theme } = useTheme();
+  const lessonsLabel = progressSummary
+    ? `${progressSummary.topicsCompleted}/${progressSummary.totalTopics} topics complete`
+    : `${subject.lessonsCompleted}/${subject.totalLessons} lessons complete`;
+  const masteryLabel = progressSummary
+    ? progressSummary.totalTopics
+      ? `${Math.round((progressSummary.topicsCompleted / progressSummary.totalTopics) * 100)}%`
+      : '0%'
+    : `${subject.progress}%`;
   const textColor = theme === 'light' ? 'text-slate-900' : 'text-white';
   const mutedColor = theme === 'light' ? 'text-slate-500' : 'text-gray-400';
   const inputClass = theme === 'light'
@@ -43,7 +53,7 @@ export default function WorkspaceHeader({ subject, activeMode, query, onQueryCha
               {subject.category}
             </span>
           </div>
-          <p className={`text-xs mt-0.5 ${mutedColor}`}>{modeLabels[activeMode]} • {subject.lessonsCompleted}/{subject.totalLessons} lessons complete</p>
+          <p className={`text-xs mt-0.5 ${mutedColor}`}>{modeLabels[activeMode]} • {lessonsLabel}</p>
         </div>
       </div>
 
@@ -61,7 +71,7 @@ export default function WorkspaceHeader({ subject, activeMode, query, onQueryCha
           </svg>
         </div>
         <div className="px-3 py-2 rounded-xl bg-green-500/10 border border-green-500/20 text-green-600 text-xs font-bold">
-          {subject.progress}% mastery
+          {masteryLabel} mastery
         </div>
       </div>
     </div>
