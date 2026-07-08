@@ -348,15 +348,16 @@ export interface GradedAnswer {
   answer: string;
   marksAwarded: number;
   isCorrect: boolean | null;
+  aiFeedback: string | null;
 }
 
 /** This user's graded answers for one attempt, used by the Results/Review screens. */
 export async function getAttemptAnswers(attemptId: string): Promise<GradedAnswer[]> {
   const { data, error } = await supabase
     .from('student_answers')
-    .select('question_id, answer, marks_awarded, is_correct')
+    .select('question_id, answer, marks_awarded, is_correct, ai_feedback')
     .eq('attempt_id', attemptId)
-    .returns<{ question_id: string; answer: string | null; marks_awarded: number | string; is_correct: boolean | null }[]>();
+    .returns<{ question_id: string; answer: string | null; marks_awarded: number | string; is_correct: boolean | null; ai_feedback: string | null }[]>();
   if (error) throw error;
 
   return (data ?? []).map((row) => ({
@@ -364,7 +365,25 @@ export async function getAttemptAnswers(attemptId: string): Promise<GradedAnswer
     answer: row.answer ?? '',
     marksAwarded: Number(row.marks_awarded),
     isCorrect: row.is_correct,
+    aiFeedback: row.ai_feedback,
   }));
+}
+
+/**
+ * Second grading pass for short-answer/essay questions, which
+ * submit_exam_attempt() can't grade itself (a plain SQL function can't call
+ * an LLM). Best-effort: if this fails, the attempt's auto-graded (MCQ/true-
+ * false) score still stands -- the caller should just leave short-answer
+ * questions showing "pending review" rather than blocking the results screen.
+ */
+export async function gradeShortAnswers(attemptId: string): Promise<AttemptResult & { gradedCount: number }> {
+  const { data, error } = await supabase.functions.invoke<{ score: number; percentage: number; grade: string; gradedCount: number; error?: string }>(
+    'ai-grade-attempt',
+    { body: { attemptId } },
+  );
+  if (error) throw error;
+  if (!data || data.error) throw new Error(data?.error ?? 'AI grading failed.');
+  return data;
 }
 
 export async function togglePaperBookmark(userId: string, paperId: string, shouldBookmark: boolean): Promise<void> {
@@ -425,10 +444,10 @@ interface RawSubmissionRow {
  * "Authentic Exam" mode: uploads the student's completed answer sheet to the
  * private 'documents' bucket (same bucket/path convention as the AI Tutor's
  * attachments -- see aiTutor.service.ts's uploadAttachment) and records it in
- * exam_submissions. AI marking is a future backend process; this just gets
- * the file safely stored and the row created in 'submitted' status.
+ * exam_submissions in 'submitted' status. Returns the new row's id so the
+ * caller can immediately kick off AI marking via markExamSubmission().
  */
-export async function uploadExamSubmission(userId: string, paperId: string, file: File): Promise<void> {
+export async function uploadExamSubmission(userId: string, paperId: string, file: File): Promise<string> {
   if (file.size > MAX_SUBMISSION_BYTES) {
     throw new Error('File is too large (max 20MB).');
   }
@@ -439,10 +458,28 @@ export async function uploadExamSubmission(userId: string, paperId: string, file
   const { error: uploadError } = await supabase.storage.from('documents').upload(path, file);
   if (uploadError) throw uploadError;
 
-  const { error: insertError } = await supabase
+  const { data, error: insertError } = await supabase
     .from('exam_submissions')
-    .insert({ profile_id: userId, paper_id: paperId, file_path: path });
+    .insert({ profile_id: userId, paper_id: paperId, file_path: path })
+    .select('id')
+    .single<{ id: string }>();
   if (insertError) throw insertError;
+  return data.id;
+}
+
+/**
+ * Invokes the ai-mark-exam Edge Function to grade a submitted answer sheet
+ * against the paper's official marking scheme. Best-effort: on failure the
+ * submission simply stays in 'submitted' status for the caller to retry.
+ */
+export async function markExamSubmission(submissionId: string): Promise<{ aiScore: number | null; aiPercentage: number | null; aiFeedback: string }> {
+  const { data, error } = await supabase.functions.invoke<{ aiScore: number | null; aiPercentage: number | null; aiFeedback: string; error?: string }>(
+    'ai-mark-exam',
+    { body: { submissionId } },
+  );
+  if (error) throw error;
+  if (!data || data.error) throw new Error(data?.error ?? 'AI marking failed.');
+  return data;
 }
 
 /** This user's past submissions for one paper, newest first, with a signed URL to view/download each file. */

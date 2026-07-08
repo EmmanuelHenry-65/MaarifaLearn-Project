@@ -7,12 +7,13 @@ interface ResultsDashboardProps {
   gradedAnswers: GradedAnswer[];
   result: AttemptResult;
   elapsedMinutes: number;
+  gradingEssays?: boolean;
   onReview: () => void;
   onRetry: () => void;
   onBack: () => void;
 }
 
-export default function ResultsDashboard({ paper, questions, gradedAnswers, result, elapsedMinutes, onReview, onRetry, onBack }: ResultsDashboardProps) {
+export default function ResultsDashboard({ paper, questions, gradedAnswers, result, elapsedMinutes, gradingEssays, onReview, onRetry, onBack }: ResultsDashboardProps) {
   const { theme } = useTheme();
   const textColor = theme === 'light' ? 'text-slate-900' : 'text-white';
   const mutedColor = theme === 'light' ? 'text-slate-500' : 'text-gray-400';
@@ -146,9 +147,11 @@ export default function ResultsDashboard({ paper, questions, gradedAnswers, resu
         {/* Pending Review Notice */}
         {pendingReview > 0 && (
           <div className={`${cardBg} rounded-2xl p-5`}>
-            <h3 className={`font-bold text-base mb-2 ${textColor}`}>Pending Review</h3>
+            <h3 className={`font-bold text-base mb-2 ${textColor}`}>{gradingEssays ? 'AI Grading In Progress' : 'Pending Review'}</h3>
             <p className={`${mutedColor} text-xs leading-relaxed`}>
-              {pendingReview} short-answer/essay {pendingReview === 1 ? 'question' : 'questions'} on this paper {pendingReview === 1 ? 'is' : 'are'} not auto-graded. Open Smart Review to compare your answer against the marking scheme.
+              {gradingEssays
+                ? `The AI is grading ${pendingReview} short-answer/essay ${pendingReview === 1 ? 'question' : 'questions'} against the marking scheme now — your score above will update in a few seconds.`
+                : `${pendingReview} short-answer/essay ${pendingReview === 1 ? 'question' : 'questions'} on this paper could not be graded automatically. Open Smart Review to see the marking scheme and your answer.`}
             </p>
           </div>
         )}

@@ -3,7 +3,6 @@ import { useAuth } from '../context/AuthContext';
 import {
   askTutor,
   getRecentSessions,
-  isSessionContinuable,
   countQuestionsToday,
   uploadAttachment,
   type TutorSession,
@@ -12,6 +11,24 @@ import {
 
 function formatMessageTime(iso: string): string {
   return new Date(iso).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+}
+
+function formatSessionTime(iso: string): string {
+  const diffMs = Date.now() - new Date(iso).getTime();
+  const diffMins = Math.round(diffMs / 60000);
+  if (diffMins < 1) return 'Just now';
+  if (diffMins < 60) return `${diffMins}m ago`;
+  const diffHours = Math.round(diffMins / 60);
+  if (diffHours < 24) return `${diffHours}h ago`;
+  const diffDays = Math.round(diffHours / 24);
+  if (diffDays < 7) return `${diffDays}d ago`;
+  return new Date(iso).toLocaleDateString();
+}
+
+function sessionLabel(session: TutorSession): string {
+  if (session.title?.trim()) return session.title.trim();
+  const firstUserMessage = session.messages.find((m) => m.sender === 'user');
+  return firstUserMessage?.content.slice(0, 60) ?? 'New conversation';
 }
 
 function displayName(user: { user_metadata?: { full_name?: string }; email?: string } | null): string {
@@ -29,6 +46,7 @@ const starterPrompts = [
 const quickTools = [
   {
     title: 'Generate Quiz',
+    prompt: 'Generate a short quiz for me — ask me which subject and topic first if I haven\'t said.',
     iconBg: 'bg-purple-500/15 border-purple-500/30 text-purple-400',
     icon: (
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
@@ -40,6 +58,7 @@ const quickTools = [
   },
   {
     title: 'Create Flashcards',
+    prompt: 'Create 5 flashcards for a topic I\'m studying — ask me which one first if I haven\'t said.',
     iconBg: 'bg-teal-500/15 border-teal-500/30 text-teal-400',
     icon: (
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
@@ -52,6 +71,7 @@ const quickTools = [
   },
   {
     title: 'Solve Problem',
+    prompt: 'Help me solve a problem step by step — ask me what the problem is.',
     iconBg: 'bg-pink-500/15 border-pink-500/30 text-pink-400',
     icon: (
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
@@ -62,6 +82,7 @@ const quickTools = [
   },
   {
     title: 'Explain Topic',
+    prompt: 'Explain a topic to me in simple terms — ask me which one first if I haven\'t said.',
     iconBg: 'bg-green-500/15 border-green-500/30 text-green-400',
     icon: (
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
@@ -135,6 +156,7 @@ export default function AITutorView() {
   const [sending, setSending] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [pendingAttachment, setPendingAttachment] = useState<TutorAttachment | null>(null);
+  const [historyOpen, setHistoryOpen] = useState(true);
   const threadEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -145,14 +167,8 @@ export default function AITutorView() {
     setLoadError(null);
     getRecentSessions()
       .then((data) => {
-        if (cancelled) return;
-        // getRecentSessions fetches newest-first (needed for the LIMIT to
-        // keep the most recent N) - reverse to chronological order for the
-        // thread view, since new messages get appended at the end.
-        const chronological = [...data].reverse();
-        setSessions(chronological);
-        const latest = chronological[chronological.length - 1];
-        if (isSessionContinuable(latest)) setActiveConversationId(latest.id);
+        // getRecentSessions fetches newest-first -- keep that order for the history list.
+        if (!cancelled) setSessions(data);
       })
       .catch((err) => {
         if (!cancelled) setLoadError(err instanceof Error ? err.message : 'Failed to load your conversations.');
@@ -165,11 +181,21 @@ export default function AITutorView() {
     };
   }, [user?.id]);
 
-  const allMessages = sessions.flatMap((s) => s.messages);
+  // null activeConversationId means "new chat, not started yet" -- the greeting/starter-prompt
+  // state below. Opening a past conversation from history, or sending a first message, sets it.
+  const activeSession = sessions.find((s) => s.id === activeConversationId);
+  const activeMessages = activeSession?.messages ?? [];
 
   useEffect(() => {
     threadEndRef.current?.scrollIntoView({ block: 'end' });
-  }, [allMessages.length]);
+  }, [activeMessages.length]);
+
+  function startNewChat() {
+    setActiveConversationId(null);
+    setQuestion('');
+    setPendingAttachment(null);
+    setLoadError(null);
+  }
 
   async function handleAsk(text?: string) {
     const trimmed = (text ?? question).trim();
@@ -179,19 +205,22 @@ export default function AITutorView() {
     const attachment = pendingAttachment;
     setPendingAttachment(null);
     try {
-      const result = await askTutor(user.id, trimmed, attachment, activeConversationId);
+      const result = await askTutor(user.id, trimmed, attachment, activeConversationId, { pageName: 'AI Tutor' });
       setActiveConversationId(result.conversationId);
       setSessions((prev) => {
-        if (prev.length > 0 && prev[prev.length - 1].id === result.conversationId) {
-          const updated = [...prev];
-          const last = updated[updated.length - 1];
-          updated[updated.length - 1] = {
-            ...last,
-            messages: [...last.messages, result.userMessage, result.assistantMessage],
-          };
-          return updated;
+        const existing = prev.find((s) => s.id === result.conversationId);
+        if (existing) {
+          return prev.map((s) =>
+            s.id === result.conversationId ? { ...s, messages: [...s.messages, result.userMessage, result.assistantMessage] } : s,
+          );
         }
-        return [...prev, { id: result.conversationId, messages: [result.userMessage, result.assistantMessage] }];
+        const newSession: TutorSession = {
+          id: result.conversationId,
+          title: trimmed.slice(0, 80) || null,
+          createdAt: new Date().toISOString(),
+          messages: [result.userMessage, result.assistantMessage],
+        };
+        return [newSession, ...prev];
       });
     } catch (err) {
       setLoadError(err instanceof Error ? err.message : 'Failed to send your question.');
@@ -215,7 +244,7 @@ export default function AITutorView() {
   }
 
   const questionsToday = countQuestionsToday(sessions);
-  const hasConversation = allMessages.length > 0;
+  const hasConversation = activeMessages.length > 0;
 
   const inputBar = (
     <div className="rounded-xl bg-[rgba(17,24,50,0.8)] border border-[rgba(56,78,135,0.3)] focus-within:border-cyan-500/40 transition-colors p-3">
@@ -288,13 +317,29 @@ export default function AITutorView() {
     <div className="flex gap-6 mt-2 flex-1 min-h-0">
       {/* Center Column: greeting/empty-state OR chat thread, with input pinned below */}
       <div className="flex-1 min-w-0 flex flex-col min-h-0 gap-4">
+        {!loading && (
+          <div className="flex items-center justify-between">
+            <p className="text-gray-500 text-xs font-semibold truncate pr-3">{activeSession ? sessionLabel(activeSession) : 'New conversation'}</p>
+            <button
+              onClick={startNewChat}
+              disabled={!hasConversation}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[rgba(17,24,50,0.6)] border border-[rgba(56,78,135,0.3)] text-gray-300 text-xs font-semibold hover:border-cyan-500/40 hover:text-cyan-400 transition-all disabled:opacity-40 disabled:hover:border-[rgba(56,78,135,0.3)] disabled:hover:text-gray-300"
+            >
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="12" y1="5" x2="12" y2="19" />
+                <line x1="5" y1="12" x2="19" y2="12" />
+              </svg>
+              New Chat
+            </button>
+          </div>
+        )}
         {loading ? (
           <div className="flex-1 flex items-center justify-center">
             <p className="text-gray-500 text-sm">Loading your conversations...</p>
           </div>
         ) : !hasConversation ? (
           <>
-            <div className="flex-1 flex flex-col items-center justify-center text-center gap-5 px-4">
+            <div className="flex flex-col items-center text-center gap-5 px-4 pt-10">
               <div>
                 <h2 className="text-white text-2xl font-extrabold">
                   Hi {displayName(user)}! <span aria-hidden="true">👋</span>
@@ -313,12 +358,12 @@ export default function AITutorView() {
                 ))}
               </div>
             </div>
-            {inputBar}
+            <div className="max-w-2xl w-full mx-auto">{inputBar}</div>
           </>
         ) : (
           <>
             <div className="flex-1 overflow-y-auto space-y-3 pr-1" style={{ maxHeight: 'calc(100vh - 260px)' }}>
-              {allMessages.map((msg) =>
+              {activeMessages.map((msg) =>
                 msg.sender === 'user' ? (
                   <div key={msg.id} className="flex justify-end">
                     <div className="max-w-[75%] bg-gradient-to-br from-cyan-500 to-blue-600 rounded-2xl rounded-br-sm px-4 py-2.5">
@@ -349,6 +394,48 @@ export default function AITutorView() {
 
       {/* Right Column */}
       <div className="w-[300px] flex-shrink-0 space-y-4 overflow-y-auto pb-6">
+
+        {/* Recent Conversations */}
+        <div className="glass-card p-5">
+          <button onClick={() => setHistoryOpen((v) => !v)} className="w-full flex items-center justify-between mb-4">
+            <h3 className="text-white font-bold text-base">Recent Conversations{sessions.length > 0 ? ` (${sessions.length})` : ''}</h3>
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className={`text-gray-500 transition-transform flex-shrink-0 ${historyOpen ? 'rotate-180' : ''}`}
+            >
+              <polyline points="6,9 12,15 18,9" />
+            </svg>
+          </button>
+          {!historyOpen ? null : loading ? (
+            <p className="text-gray-500 text-xs">Loading...</p>
+          ) : sessions.length === 0 ? (
+            <p className="text-gray-500 text-xs">No conversations yet — ask a question to get started.</p>
+          ) : (
+            <div className="space-y-1.5 max-h-72 overflow-y-auto pr-1">
+              {sessions.map((session) => (
+                <button
+                  key={session.id}
+                  onClick={() => setActiveConversationId(session.id)}
+                  className={`w-full text-left px-3 py-2 rounded-lg text-xs transition-all ${
+                    session.id === activeConversationId
+                      ? 'bg-cyan-500/15 border border-cyan-500/30 text-cyan-300'
+                      : 'bg-[rgba(17,24,50,0.5)] border border-[rgba(56,78,135,0.15)] text-gray-400 hover:border-cyan-500/20'
+                  }`}
+                >
+                  <p className="truncate font-semibold">{sessionLabel(session)}</p>
+                  <p className="text-[10px] mt-0.5 opacity-70">{formatSessionTime(session.createdAt)}</p>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
 
         {/* Today's AI Insights */}
         <div className="glass-card p-5">
@@ -392,6 +479,7 @@ export default function AITutorView() {
             {quickTools.map((tool) => (
               <button
                 key={tool.title}
+                onClick={() => handleAsk(tool.prompt)}
                 className="flex items-center gap-2 p-2.5 rounded-xl bg-[rgba(17,24,50,0.6)] border border-[rgba(56,78,135,0.2)] hover:border-cyan-500/30 transition-all text-left"
               >
                 <div className={`w-8 h-8 rounded-lg border flex items-center justify-center flex-shrink-0 ${tool.iconBg}`}>

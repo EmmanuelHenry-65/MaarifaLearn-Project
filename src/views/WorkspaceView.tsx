@@ -189,6 +189,7 @@ export default function WorkspaceView() {
             progressSummary={progressSummary}
             progressLoading={progressLoading}
             progressBump={progressBump}
+            topicProgress={topicProgress}
             onProgressBump={() => {
               setProgressBump((value) => Math.min(18, value + 2));
               if (user && resolvedTopicId) {

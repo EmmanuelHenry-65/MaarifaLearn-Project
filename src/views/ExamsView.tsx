@@ -8,6 +8,7 @@ import {
   getPaperQuestions,
   getReviewQuestions,
   getAttemptAnswers,
+  gradeShortAnswers,
   type ExamPaper,
   type ExamQuestion,
   type AttemptResult,
@@ -57,6 +58,7 @@ export default function ExamsView() {
   const [attemptStartedAt, setAttemptStartedAt] = useState<number | null>(null);
   const [attemptResult, setAttemptResult] = useState<AttemptResult | null>(null);
   const [gradedAnswers, setGradedAnswers] = useState<GradedAnswer[]>([]);
+  const [gradingEssays, setGradingEssays] = useState(false);
   const [reviewQuestions, setReviewQuestions] = useState<ExamQuestion[]>([]);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [flags, setFlags] = useState<Record<string, boolean>>({});
@@ -170,6 +172,24 @@ export default function ExamsView() {
       setReviewQuestions(review);
       setScreen('results');
       refresh();
+
+      // submit_exam_attempt() can't grade short-answer/essay questions itself
+      // (a plain SQL function can't call an LLM) -- run the AI grading pass
+      // now and refresh the results once it's done. Best-effort: if it fails,
+      // the auto-graded score already shown still stands.
+      const hasUngraded = graded.some((a) => a.isCorrect === null);
+      if (hasUngraded) {
+        setGradingEssays(true);
+        try {
+          const finalResult = await gradeShortAnswers(attemptId);
+          setAttemptResult(finalResult);
+          setGradedAnswers(await getAttemptAnswers(attemptId));
+        } catch {
+          // Leave the auto-graded result in place; those questions just stay "pending review."
+        } finally {
+          setGradingEssays(false);
+        }
+      }
     } catch {
       setNotice('Could not submit the exam — please try again.');
     }
@@ -338,6 +358,7 @@ export default function ExamsView() {
           gradedAnswers={gradedAnswers}
           result={attemptResult}
           elapsedMinutes={elapsedMinutes}
+          gradingEssays={gradingEssays}
           onReview={() => setScreen('review')}
           onRetry={() => startExam(activePaper, examMode)}
           onBack={() => setScreen('dashboard')}

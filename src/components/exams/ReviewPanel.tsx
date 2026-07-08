@@ -54,6 +54,12 @@ export default function ReviewPanel({ paper, questions, answers, gradedAnswers, 
           <h3 className={`font-bold text-base ${textColor}`}>Marking Scheme</h3>
           <p className={`text-sm mt-2 ${mutedColor}`}>{question.markingScheme ?? 'No marking scheme provided for this question.'}</p>
         </div>
+        {graded?.aiFeedback && (
+          <div className={`rounded-2xl border p-5 ${panelBg}`}>
+            <h3 className={`font-bold text-base ${textColor}`}>AI Feedback on Your Answer</h3>
+            <p className={`text-sm mt-2 ${mutedColor}`}>{graded.aiFeedback}</p>
+          </div>
+        )}
         <div className={`rounded-2xl border p-5 ${panelBg}`}>
           <h3 className={`font-bold text-base ${textColor}`}>AI Explanation</h3>
           <p className={`text-sm mt-2 ${mutedColor}`}>{question.aiExplanation ?? 'No AI explanation available for this question yet.'}</p>
