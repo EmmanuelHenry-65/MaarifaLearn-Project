@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useTheme } from '../../context/ThemeContext';
 import {
   getExamSubmissions,
+  markExamSubmission,
   uploadExamSubmission,
   type ExamPaper,
   type ExamSubmission,
@@ -15,9 +16,9 @@ interface AuthenticExamPanelProps {
 }
 
 const statusLabel = (status: ExamSubmission['status']) => {
-  if (status === 'ai_reviewing') return 'AI is reviewing...';
+  if (status === 'ai_reviewing') return 'AI is reviewing — if this sits too long, use Retry Marking';
   if (status === 'reviewed') return 'Reviewed';
-  return 'Uploaded — AI marking coming soon';
+  return 'Uploaded — not yet marked';
 };
 
 export default function AuthenticExamPanel({ paper, userId }: AuthenticExamPanelProps) {
@@ -29,8 +30,11 @@ export default function AuthenticExamPanel({ paper, userId }: AuthenticExamPanel
   const [submissions, setSubmissions] = useState<ExamSubmission[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
+  const [marking, setMarking] = useState(false);
   const [notice, setNotice] = useState('');
   const [viewingPdf, setViewingPdf] = useState<{ title: string; url: string } | null>(null);
+  const [expandedFeedbackId, setExpandedFeedbackId] = useState<string | null>(null);
+  const [retryingId, setRetryingId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const load = async () => {
@@ -57,13 +61,33 @@ export default function AuthenticExamPanel({ paper, userId }: AuthenticExamPanel
     setUploading(true);
     setNotice('');
     try {
-      await uploadExamSubmission(userId, paper.id, file);
-      setNotice('Uploaded! Your answer sheet is saved.');
+      const submissionId = await uploadExamSubmission(userId, paper.id, file);
+      setNotice('Uploaded! Marking your paper now...');
+      await load();
+      setUploading(false);
+      setMarking(true);
+      await markExamSubmission(submissionId);
+      setNotice('Marking complete — see your result below.');
       await load();
     } catch (err) {
       setNotice(err instanceof Error ? err.message : 'Upload failed — please try again.');
     } finally {
       setUploading(false);
+      setMarking(false);
+    }
+  };
+
+  const retryMarking = async (submissionId: string) => {
+    setRetryingId(submissionId);
+    setNotice('');
+    try {
+      await markExamSubmission(submissionId);
+      setNotice('Marking complete — see your result below.');
+      await load();
+    } catch (err) {
+      setNotice(err instanceof Error ? err.message : 'Marking failed again — please try once more in a moment.');
+    } finally {
+      setRetryingId(null);
     }
   };
 
@@ -104,10 +128,10 @@ export default function AuthenticExamPanel({ paper, userId }: AuthenticExamPanel
         />
         <button
           onClick={() => fileInputRef.current?.click()}
-          disabled={uploading}
+          disabled={uploading || marking}
           className="inline-flex mt-3 px-4 py-2 rounded-lg bg-purple-500 text-white text-xs font-bold hover:bg-purple-600 disabled:opacity-50"
         >
-          {uploading ? 'Uploading...' : 'Upload Completed Answers'}
+          {uploading ? 'Uploading...' : marking ? 'AI is marking your paper...' : 'Upload Completed Answers'}
         </button>
         {notice && <p className={`text-xs mt-2 ${mutedColor}`}>{notice}</p>}
       </div>
@@ -121,15 +145,36 @@ export default function AuthenticExamPanel({ paper, userId }: AuthenticExamPanel
         ) : (
           <div className="space-y-2 mt-2">
             {submissions.map((s) => (
-              <div key={s.id} className="flex items-center justify-between text-xs">
-                <div>
-                  <p className={textColor}>{new Date(s.submittedAt).toLocaleString()}</p>
-                  <p className={mutedColor}>{statusLabel(s.status)}{s.aiPercentage !== null ? ` • ${s.aiPercentage}%` : ''}</p>
+              <div key={s.id} className={`rounded-lg ${s.aiFeedback ? `border p-2 ${itemBg}` : ''}`}>
+                <div className="flex items-center justify-between text-xs">
+                  <div>
+                    <p className={textColor}>{new Date(s.submittedAt).toLocaleString()}</p>
+                    <p className={mutedColor}>{statusLabel(s.status)}{s.aiPercentage !== null ? ` • ${s.aiPercentage}%` : ''}</p>
+                  </div>
+                  <div className="flex gap-3">
+                    {(s.status === 'submitted' || s.status === 'ai_reviewing') && (
+                      <button
+                        onClick={() => retryMarking(s.id)}
+                        disabled={retryingId === s.id}
+                        className="text-purple-600 font-bold disabled:opacity-50"
+                      >
+                        {retryingId === s.id ? 'Marking...' : s.status === 'ai_reviewing' ? 'Retry Marking' : 'Mark Now'}
+                      </button>
+                    )}
+                    {s.aiFeedback && (
+                      <button onClick={() => setExpandedFeedbackId((id) => (id === s.id ? null : s.id))} className="text-cyan-600 font-bold">
+                        {expandedFeedbackId === s.id ? 'Hide Feedback' : 'View Feedback'}
+                      </button>
+                    )}
+                    {s.signedUrl && (
+                      <button onClick={() => setViewingPdf({ title: `Your submission — ${new Date(s.submittedAt).toLocaleDateString()}`, url: s.signedUrl! })} className="text-cyan-600 font-bold">
+                        View
+                      </button>
+                    )}
+                  </div>
                 </div>
-                {s.signedUrl && (
-                  <button onClick={() => setViewingPdf({ title: `Your submission — ${new Date(s.submittedAt).toLocaleDateString()}`, url: s.signedUrl! })} className="text-cyan-600 font-bold">
-                    View
-                  </button>
+                {expandedFeedbackId === s.id && s.aiFeedback && (
+                  <p className={`text-xs mt-2 leading-relaxed whitespace-pre-line ${mutedColor}`}>{s.aiFeedback}</p>
                 )}
               </div>
             ))}

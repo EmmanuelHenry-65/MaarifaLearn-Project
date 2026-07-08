@@ -100,7 +100,7 @@ export default function LoginView() {
 
         {error && <p className="text-red-500 text-sm text-center">{error}</p>}
 
-        <AuthButton type="submit">
+        <AuthButton type="submit" disabled={loading}>
           {loading ? "Logging in..." : "Login"}
         </AuthButton>
 
