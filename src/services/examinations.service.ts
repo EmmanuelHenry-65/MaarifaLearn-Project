@@ -233,20 +233,23 @@ interface RawQuestionRow {
   option_c: string | null;
   option_d: string | null;
   marks: number;
-  marking_scheme: string | null;
-  ai_explanation: string | null;
+  marking_scheme?: string | null;
+  ai_explanation?: string | null;
 }
 
 /**
  * Questions for a single paper, via the column set the DB actually grants to
- * `authenticated` (correct_answer is revoked at the column level -- see
- * database/schema/18_rls_hardening.sql and 20_examinations_extensions.sql --
- * so it is never requested here).
+ * `authenticated` (correct_answer, marking_scheme and ai_explanation are all
+ * revoked at the column level -- see database/schema/18_rls_hardening.sql and
+ * 21_exam_review_security.sql -- so none of them are requested here). This is
+ * used at preview and during an active attempt, before submission, so the
+ * marking scheme / AI explanation must not be reachable yet -- see
+ * getReviewQuestions() for the post-submission equivalent.
  */
 export async function getPaperQuestions(paperId: string): Promise<ExamQuestion[]> {
   const { data, error } = await supabase
     .from('questions')
-    .select('id, paper_id, topic_id, question_text, question_type, option_a, option_b, option_c, option_d, marks, marking_scheme, ai_explanation')
+    .select('id, paper_id, topic_id, question_text, question_type, option_a, option_b, option_c, option_d, marks')
     .eq('paper_id', paperId)
     .returns<RawQuestionRow[]>();
 
@@ -263,8 +266,34 @@ export async function getPaperQuestions(paperId: string): Promise<ExamQuestion[]
     optionC: row.option_c,
     optionD: row.option_d,
     marks: row.marks,
-    markingScheme: row.marking_scheme,
-    aiExplanation: row.ai_explanation,
+    markingScheme: null,
+    aiExplanation: null,
+  }));
+}
+
+/**
+ * Marking scheme + AI explanation for review, via the get_review_questions()
+ * RPC (database/schema/21_exam_review_security.sql), which only releases them
+ * for an attempt the caller owns that is already submitted/graded.
+ */
+export async function getReviewQuestions(attemptId: string): Promise<ExamQuestion[]> {
+  const { data, error } = await supabase.rpc('get_review_questions', { p_attempt_id: attemptId });
+
+  if (error) throw error;
+
+  return ((data as RawQuestionRow[] | null) ?? []).map((row) => ({
+    id: row.id,
+    paperId: row.paper_id,
+    topicId: row.topic_id,
+    questionText: row.question_text,
+    questionType: row.question_type,
+    optionA: row.option_a,
+    optionB: row.option_b,
+    optionC: row.option_c,
+    optionD: row.option_d,
+    marks: row.marks,
+    markingScheme: row.marking_scheme ?? null,
+    aiExplanation: row.ai_explanation ?? null,
   }));
 }
 
@@ -360,6 +389,95 @@ export async function getBookmarkedPaperIds(userId: string): Promise<Set<string>
   if (error) throw error;
 
   return new Set((data ?? []).map((row) => row.paper_id));
+}
+
+const SUBMISSION_SIGNED_URL_TTL_SECONDS = 60 * 60;
+export const MAX_SUBMISSION_BYTES = 20 * 1024 * 1024;
+
+export type SubmissionStatus = 'submitted' | 'ai_reviewing' | 'reviewed';
+
+export interface ExamSubmission {
+  id: string;
+  paperId: string;
+  filePath: string;
+  signedUrl: string | null;
+  status: SubmissionStatus;
+  aiScore: number | null;
+  aiPercentage: number | null;
+  aiFeedback: string | null;
+  submittedAt: string;
+  reviewedAt: string | null;
+}
+
+interface RawSubmissionRow {
+  id: string;
+  paper_id: string;
+  file_path: string;
+  status: SubmissionStatus;
+  ai_score: number | string | null;
+  ai_percentage: number | string | null;
+  ai_feedback: string | null;
+  submitted_at: string;
+  reviewed_at: string | null;
+}
+
+/**
+ * "Authentic Exam" mode: uploads the student's completed answer sheet to the
+ * private 'documents' bucket (same bucket/path convention as the AI Tutor's
+ * attachments -- see aiTutor.service.ts's uploadAttachment) and records it in
+ * exam_submissions. AI marking is a future backend process; this just gets
+ * the file safely stored and the row created in 'submitted' status.
+ */
+export async function uploadExamSubmission(userId: string, paperId: string, file: File): Promise<void> {
+  if (file.size > MAX_SUBMISSION_BYTES) {
+    throw new Error('File is too large (max 20MB).');
+  }
+
+  const safeName = file.name.replace(/[^a-zA-Z0-9.\-_]/g, '_');
+  const path = `${userId}/exam-submissions/${Date.now()}-${safeName}`;
+
+  const { error: uploadError } = await supabase.storage.from('documents').upload(path, file);
+  if (uploadError) throw uploadError;
+
+  const { error: insertError } = await supabase
+    .from('exam_submissions')
+    .insert({ profile_id: userId, paper_id: paperId, file_path: path });
+  if (insertError) throw insertError;
+}
+
+/** This user's past submissions for one paper, newest first, with a signed URL to view/download each file. */
+export async function getExamSubmissions(userId: string, paperId: string): Promise<ExamSubmission[]> {
+  const { data, error } = await supabase
+    .from('exam_submissions')
+    .select('id, paper_id, file_path, status, ai_score, ai_percentage, ai_feedback, submitted_at, reviewed_at')
+    .eq('profile_id', userId)
+    .eq('paper_id', paperId)
+    .order('submitted_at', { ascending: false })
+    .returns<RawSubmissionRow[]>();
+  if (error) throw error;
+
+  const rows = data ?? [];
+  const paths = rows.map((r) => r.file_path);
+  const signedUrlByPath = new Map<string, string>();
+  if (paths.length > 0) {
+    const { data: signedUrls } = await supabase.storage.from('documents').createSignedUrls(paths, SUBMISSION_SIGNED_URL_TTL_SECONDS);
+    signedUrls?.forEach((s) => {
+      if (s.signedUrl && s.path) signedUrlByPath.set(s.path, s.signedUrl);
+    });
+  }
+
+  return rows.map((row) => ({
+    id: row.id,
+    paperId: row.paper_id,
+    filePath: row.file_path,
+    signedUrl: signedUrlByPath.get(row.file_path) ?? null,
+    status: row.status,
+    aiScore: row.ai_score === null ? null : Number(row.ai_score),
+    aiPercentage: row.ai_percentage === null ? null : Number(row.ai_percentage),
+    aiFeedback: row.ai_feedback,
+    submittedAt: row.submitted_at,
+    reviewedAt: row.reviewed_at,
+  }));
 }
 
 /** Papers-attempted / average / best score / total practice time, derived entirely from this user's real attempts. */

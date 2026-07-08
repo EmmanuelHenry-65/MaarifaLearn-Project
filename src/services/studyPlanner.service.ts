@@ -3,6 +3,7 @@
 // deadlines from it client-side (see the compute* functions below) rather
 // than issuing a separate round trip for every widget.
 import { supabase } from '../lib/supabase';
+import { createNotification } from './notifications.service';
 
 export type TaskType = 'lesson' | 'practice' | 'task' | 'past_paper' | 'revision';
 export type TaskPriority = 'low' | 'medium' | 'high';
@@ -52,27 +53,32 @@ export class StudyPlannerError extends Error {}
 
 const TASK_COLUMNS = 'id, study_plan_id, title, subject, task_type, due_date, start_time, end_time, priority, completed';
 
-/** Every user gets one implicit study plan — the UI has no concept of multiple plans. */
+/**
+ * Every user gets one implicit study plan — the UI has no concept of
+ * multiple plans. Uses upsert on the profile_id unique constraint instead of
+ * a plain select-then-insert, so two near-simultaneous calls (e.g. an auth
+ * state change firing this effect twice with a fresh user object) can't both
+ * pass the "does one exist?" check and create duplicates.
+ */
 export async function getOrCreateDefaultPlan(userId: string): Promise<string> {
+  const { data: created, error: upsertError } = await supabase
+    .from('study_plans')
+    .upsert({ profile_id: userId, title: 'My Study Plan' }, { onConflict: 'profile_id', ignoreDuplicates: true })
+    .select('id')
+    .maybeSingle<{ id: string }>();
+
+  if (!upsertError && created) return created.id;
+
+  // ignoreDuplicates means a pre-existing row returns no data here (it was
+  // skipped, not re-selected) - fetch the row that already won the race.
   const { data: existing, error: selectError } = await supabase
     .from('study_plans')
     .select('id')
     .eq('profile_id', userId)
-    .order('created_at', { ascending: true })
-    .limit(1)
-    .maybeSingle<{ id: string }>();
-
-  if (selectError) throw new StudyPlannerError('Could not load your study plan.');
-  if (existing) return existing.id;
-
-  const { data: created, error: insertError } = await supabase
-    .from('study_plans')
-    .insert({ profile_id: userId, title: 'My Study Plan' })
-    .select('id')
     .single<{ id: string }>();
 
-  if (insertError) throw new StudyPlannerError('Could not create your study plan.');
-  return created.id;
+  if (selectError || !existing) throw new StudyPlannerError('Could not load your study plan.');
+  return existing.id;
 }
 
 /** Fetches every task with a due date inside [startDate, endDate] (inclusive, ISO dates). */
@@ -300,4 +306,48 @@ export function getUpcomingDeadlines(tasks: StudyTask[], limit = 3): StudyTask[]
     .filter((t) => !t.completed && t.dueDate && t.dueDate > todayISO)
     .sort((a, b) => (a.dueDate ?? '').localeCompare(b.dueDate ?? ''))
     .slice(0, limit);
+}
+
+/**
+ * Creates a "planner" notification for each of today's incomplete tasks that
+ * doesn't already have one - dedupes by exact title match instead of a
+ * schema change, so calling this repeatedly (e.g. every page load) is safe
+ * and never sends the same reminder twice.
+ */
+export async function notifyDueTasksToday(userId: string): Promise<void> {
+  // Deliberately does NOT use getOrCreateDefaultPlan - this runs on every
+  // page load for every user, and a due-task check shouldn't have the side
+  // effect of creating study plan data for someone who's never touched
+  // that feature. If they have no plan yet, there's nothing to remind them of.
+  const { data: existingPlan, error: planError } = await supabase
+    .from('study_plans')
+    .select('id')
+    .eq('profile_id', userId)
+    .order('created_at', { ascending: true })
+    .limit(1)
+    .maybeSingle<{ id: string }>();
+  if (planError || !existingPlan) return;
+
+  const todayISO = toISODate(new Date());
+  const tasks = await getTasksInRange(existingPlan.id, todayISO, todayISO);
+  const dueToday = tasks.filter((t) => !t.completed);
+  if (dueToday.length === 0) return;
+
+  for (const task of dueToday) {
+    const title = `Study reminder: ${task.title}`;
+    const { data: existing } = await supabase
+      .from('notifications')
+      .select('id')
+      .eq('profile_id', userId)
+      .eq('title', title)
+      .maybeSingle();
+    if (existing) continue;
+
+    await createNotification(
+      userId,
+      title,
+      `Due today${task.subject ? ` • ${task.subject}` : ''}`,
+      'planner',
+    ).catch(() => {});
+  }
 }

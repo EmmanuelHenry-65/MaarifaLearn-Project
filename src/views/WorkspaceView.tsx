@@ -1,10 +1,20 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Navigate, useParams } from 'react-router-dom';
 import { getDefaultLesson, getDefaultTopic, getWorkspaceSubject } from '../data/workspaceData';
 import type { WorkspaceLesson, WorkspaceMode, WorkspaceTopic } from '../data/workspaceData';
 import { useAuth } from '../context/AuthContext';
 import { useAchievementCelebration } from '../context/AchievementCelebrationContext';
-import { touchTopicAccess, recordTopicProgress, getMyLearningData, aggregateSubjects, type LearningTopic } from '../services/learning.service';
+import {
+  touchTopicAccess,
+  recordTopicProgress,
+  resolveTopicId,
+  getSubjectResources,
+  getSubjectProgressSummary,
+  getMyLearningData,
+  type SubjectResource,
+  type SubjectProgressSummary,
+  type TopicProgressBySlug,
+} from '../services/learning.service';
 import { checkForNewAchievements } from '../services/achievements.service';
 import AISidePanel from '../components/workspace/AISidePanel';
 import FloatingAIButton from '../components/workspace/FloatingAIButton';
@@ -24,7 +34,14 @@ export default function WorkspaceView() {
   const [activeTopic, setActiveTopic] = useState<WorkspaceTopic | undefined>(undefined);
   const [query, setQuery] = useState('');
   const [aiOpen, setAiOpen] = useState(false);
-  const [topics, setTopics] = useState<LearningTopic[]>([]);
+  const [progressBump, setProgressBump] = useState(0);
+  const [resolvedTopicId, setResolvedTopicId] = useState<string | null>(null);
+  const [resources, setResources] = useState<SubjectResource[]>([]);
+  const [resourcesLoading, setResourcesLoading] = useState(false);
+  const [progressSummary, setProgressSummary] = useState<SubjectProgressSummary | null>(null);
+  const [progressLoading, setProgressLoading] = useState(false);
+  const [progressRefreshTick, setProgressRefreshTick] = useState(0);
+  const [topicProgress, setTopicProgress] = useState<TopicProgressBySlug>({});
 
   useEffect(() => {
     localStorage.setItem('workspace-sidebar-collapsed', String(collapsed));
@@ -38,53 +55,98 @@ export default function WorkspaceView() {
     setActiveMode(subjectId ? 'lesson' : 'overview');
   }, [subject, subjectId]);
 
-  const refetchTopics = useCallback(async () => {
-    const data = await getMyLearningData();
-    setTopics(data);
-    return data;
-  }, []);
-
   useEffect(() => {
-    if (!user) return;
-    refetchTopics().catch(() => {});
-  }, [user?.id, refetchTopics]);
-
-  // The real Supabase row behind the currently-selected static topic, matched by slug.
-  const currentTopicRow = useMemo(
-    () => topics.find((t) => t.topicSlug === activeTopic?.id) ?? null,
-    [topics, activeTopic],
-  );
-
-  useEffect(() => {
-    if (!user || !currentTopicRow) return;
+    if (!subject) return;
     let cancelled = false;
-    touchTopicAccess(user.id, currentTopicRow.topicId)
-      .then(() => checkForNewAchievements(user.id))
-      .then((newlyEarned) => {
-        if (!cancelled) celebrate(newlyEarned);
+    setResourcesLoading(true);
+    getSubjectResources(subject.id)
+      .then((rows) => {
+        if (!cancelled) setResources(rows);
       })
-      .catch(() => {});
+      .catch(() => {
+        if (!cancelled) setResources([]);
+      })
+      .finally(() => {
+        if (!cancelled) setResourcesLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [subject]);
+
+  useEffect(() => {
+    if (!subject || !user) {
+      setProgressSummary(null);
+      return;
+    }
+    let cancelled = false;
+    setProgressLoading(true);
+    getSubjectProgressSummary(user.id, subject.id)
+      .then((summary) => {
+        if (!cancelled) setProgressSummary(summary);
+      })
+      .catch(() => {
+        if (!cancelled) setProgressSummary(null);
+      })
+      .finally(() => {
+        if (!cancelled) setProgressLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [subject, user, progressRefreshTick]);
+
+  useEffect(() => {
+    if (!subject || !user) {
+      setTopicProgress({});
+      return;
+    }
+    let cancelled = false;
+    getMyLearningData()
+      .then((topics) => {
+        if (cancelled) return;
+        const map: TopicProgressBySlug = {};
+        for (const topic of topics) {
+          if (topic.subjectCode === subject.id) {
+            map[topic.topicSlug] = { completed: topic.completed, masteryScore: topic.masteryScore };
+          }
+        }
+        setTopicProgress(map);
+      })
+      .catch(() => {
+        if (!cancelled) setTopicProgress({});
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [subject, user, progressRefreshTick]);
+
+  useEffect(() => {
+    setResolvedTopicId(null);
+    if (!user || !activeTopic) return;
+    let cancelled = false;
+    resolveTopicId(activeTopic.id).then((id) => {
+      if (cancelled || !id) return;
+      setResolvedTopicId(id);
+      touchTopicAccess(user.id, id)
+        .then(() => checkForNewAchievements(user.id))
+        .then((newlyEarned) => {
+          if (!cancelled) celebrate(newlyEarned);
+        })
+        .catch(() => {});
+    });
     return () => {
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.id, currentTopicRow?.topicId]);
-
-  const subjectTopics = useMemo(() => (subject ? topics.filter((t) => t.subjectCode === subject.id) : []), [topics, subject]);
-
-  const displaySubject = useMemo(() => {
-    if (!subject) return null;
-    const summary = aggregateSubjects(topics).find((s) => s.code === subject.id);
-    return summary
-      ? { ...subject, progress: summary.progress, lessonsCompleted: summary.completedCount, totalLessons: summary.totalCount }
-      : subject;
-  }, [subject, topics]);
+  }, [user?.id, activeTopic?.id]);
 
   const isUnknownSubject = Boolean(subjectId && !subject);
+  const progress = useMemo(() => Math.min(100, (subject?.progress ?? 0) + progressBump), [progressBump, subject?.progress]);
 
   if (!subjectId) return <SubjectSelection />;
   if (isUnknownSubject) return <Navigate to="/workspace" replace />;
-  if (!subject || !displaySubject) return null;
+  if (!subject) return null;
 
   const selectLesson = (lesson: WorkspaceLesson, topic?: WorkspaceTopic) => {
     setActiveLesson(lesson);
@@ -92,21 +154,9 @@ export default function WorkspaceView() {
     setActiveMode('lesson');
   };
 
-  async function handleProgressBump() {
-    if (!user || !currentTopicRow) return;
-    try {
-      await recordTopicProgress(user.id, currentTopicRow.topicId, 15);
-      await refetchTopics();
-      const newlyEarned = await checkForNewAchievements(user.id);
-      celebrate(newlyEarned);
-    } catch {
-      // best-effort - the UI simply won't reflect this bump if it fails
-    }
-  }
-
   return (
     <div className="flex flex-col gap-4 flex-1 min-h-0">
-      <WorkspaceHeader subject={displaySubject} activeMode={activeMode} query={query} onQueryChange={setQuery} />
+      <WorkspaceHeader subject={{ ...subject, progress }} activeMode={activeMode} query={query} onQueryChange={setQuery} progressSummary={progressSummary} />
 
       <div className="flex gap-4 flex-1 min-h-0">
         <SubjectSidebar
@@ -116,6 +166,7 @@ export default function WorkspaceView() {
           activeLessonId={activeLesson?.id}
           activeTopicId={activeTopic?.id}
           query={query}
+          topicProgress={topicProgress}
           onToggleCollapsed={() => setCollapsed((value) => !value)}
           onModeChange={setActiveMode}
           onSelectLesson={selectLesson}
@@ -127,16 +178,31 @@ export default function WorkspaceView() {
             activeMode={activeMode}
             activeLesson={activeLesson}
             activeTopic={activeTopic}
-            topicRow={currentTopicRow}
-            subjectTopics={subjectTopics}
-            onProgressBump={handleProgressBump}
-            onBookmarkChanged={refetchTopics}
+            resources={resources}
+            resourcesLoading={resourcesLoading}
+            userId={user?.id ?? null}
+            resolvedTopicId={resolvedTopicId}
+            progressSummary={progressSummary}
+            progressLoading={progressLoading}
+            progressBump={progressBump}
+            onProgressBump={() => {
+              setProgressBump((value) => Math.min(18, value + 2));
+              if (user && resolvedTopicId) {
+                recordTopicProgress(user.id, resolvedTopicId, 15)
+                  .then(() => checkForNewAchievements(user.id))
+                  .then((newlyEarned) => {
+                    celebrate(newlyEarned);
+                    setProgressRefreshTick((v) => v + 1);
+                  })
+                  .catch(() => {});
+              }
+            }}
           />
         </main>
       </div>
 
       <FloatingAIButton isOpen={aiOpen} onClick={() => setAiOpen((value) => !value)} />
-      <AISidePanel open={aiOpen} subject={subject} lesson={activeLesson} topic={activeTopic} onClose={() => setAiOpen(false)} />
+      <AISidePanel open={aiOpen} subject={subject} lesson={activeLesson} topic={activeTopic} userId={user?.id ?? null} onClose={() => setAiOpen(false)} />
     </div>
   );
 }

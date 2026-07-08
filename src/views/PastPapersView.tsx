@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useExamData } from '../hooks/useExamData';
 import { difficultyLabel, paperTypeLabel, type CompletionStatus, type Difficulty, type ExamPaper } from '../services/examinations.service';
+import { forceDownloadUrl } from '../utils/download';
 
 type TabKey = 'All Papers' | 'My Attempts' | 'Bookmarked';
 type PerfRange = 'This Year' | 'Last Year' | 'All Time';
@@ -139,7 +140,7 @@ export default function PastPapersView() {
 
   const handleDownload = (paper: ExamPaper) => {
     if (!paper.pdfUrl) return;
-    setNotice(`Downloading ${paper.title}...`);
+    window.open(forceDownloadUrl(paper.pdfUrl, `${paper.title}.pdf`), '_blank', 'noopener,noreferrer');
     setOpenMenuId(null);
   };
 

@@ -45,6 +45,8 @@ export interface PerformanceStats {
   xp: number;
 }
 
+export type TopicProgressBySlug = Record<string, { completed: boolean; masteryScore: number }>;
+
 export interface SubjectSummary {
   code: string;
   name: string;
@@ -189,6 +191,39 @@ export async function getUpcomingLessons(monthDate: Date): Promise<UpcomingLesso
   }));
 }
 
+export type SubjectResourceType = 'pdf' | 'video' | 'audio' | 'image' | 'link';
+
+export interface SubjectResource {
+  id: string;
+  title: string;
+  resourceType: SubjectResourceType;
+  url: string | null;
+}
+
+interface RawSubjectResourceRow {
+  id: string;
+  title: string;
+  resource_type: SubjectResourceType;
+  url: string | null;
+}
+
+/** All resources (pamphlets, videos, etc.) attached anywhere under this subject -- Workspace shows these subject-wide rather than per-topic, since resources aren't seeded one-per-topic. */
+export async function getSubjectResources(subjectCode: string): Promise<SubjectResource[]> {
+  const { data, error } = await supabase
+    .from('resources')
+    .select('id, title, resource_type, url, topic:topics!inner(lesson:lessons!inner(subject:subjects!inner(code)))')
+    .eq('topic.lesson.subject.code', subjectCode)
+    .returns<(RawSubjectResourceRow & { topic: unknown })[]>();
+  if (error) throw error;
+
+  return (data ?? []).map((row) => ({
+    id: row.id,
+    title: row.title,
+    resourceType: row.resource_type,
+    url: row.url,
+  }));
+}
+
 const topicIdBySlug = new Map<string, string>();
 
 /** Resolves a workspace curriculum slug (e.g. "linear-equations-topic-1") to its real topics.id UUID. */
@@ -251,6 +286,151 @@ export async function recordTopicProgress(userId: string, topicId: string, delta
   if (error) throw error;
 
   return nextScore;
+}
+
+export interface WorkspaceNoteRow {
+  id: string;
+  title: string;
+  content: string;
+  pinned: boolean;
+  createdAt: string;
+}
+
+interface RawNoteRow {
+  id: string;
+  title: string;
+  content: string;
+  pinned: boolean;
+  created_at: string;
+}
+
+export async function getTopicNotes(userId: string, topicId: string): Promise<WorkspaceNoteRow[]> {
+  const { data, error } = await supabase
+    .from('notes')
+    .select('id, title, content, pinned, created_at')
+    .eq('profile_id', userId)
+    .eq('topic_id', topicId)
+    .order('created_at', { ascending: false })
+    .returns<RawNoteRow[]>();
+  if (error) throw error;
+  return (data ?? []).map((r) => ({ id: r.id, title: r.title, content: r.content, pinned: r.pinned, createdAt: r.created_at }));
+}
+
+export async function createNote(userId: string, topicId: string, title: string, content: string): Promise<WorkspaceNoteRow> {
+  const { data, error } = await supabase
+    .from('notes')
+    .insert({ profile_id: userId, topic_id: topicId, title, content })
+    .select('id, title, content, pinned, created_at')
+    .single<RawNoteRow>();
+  if (error) throw error;
+  return { id: data.id, title: data.title, content: data.content, pinned: data.pinned, createdAt: data.created_at };
+}
+
+export async function toggleNotePinned(noteId: string, pinned: boolean): Promise<void> {
+  const { error } = await supabase.from('notes').update({ pinned }).eq('id', noteId);
+  if (error) throw error;
+}
+
+export async function deleteNote(noteId: string): Promise<void> {
+  const { error } = await supabase.from('notes').delete().eq('id', noteId);
+  if (error) throw error;
+}
+
+export interface BookmarkedTopic {
+  bookmarkId: string;
+  topicId: string;
+  topicTitle: string;
+  lessonTitle: string;
+}
+
+interface RawBookmarkedTopicRow {
+  id: string;
+  topic_id: string;
+  topic: { title: string; lesson: { title: string } } | null;
+}
+
+/** This user's bookmarked topics within one subject (via topic -> lesson -> subject). */
+export async function getSubjectBookmarkedTopics(userId: string, subjectCode: string): Promise<BookmarkedTopic[]> {
+  const { data, error } = await supabase
+    .from('bookmarks')
+    .select('id, topic_id, topic:topics!inner(title, lesson:lessons!inner(title, subject:subjects!inner(code)))')
+    .eq('profile_id', userId)
+    .eq('topic.lesson.subject.code', subjectCode)
+    .not('topic_id', 'is', null)
+    .returns<RawBookmarkedTopicRow[]>();
+  if (error) throw error;
+
+  return (data ?? [])
+    .filter((r): r is RawBookmarkedTopicRow & { topic: NonNullable<RawBookmarkedTopicRow['topic']> } => Boolean(r.topic))
+    .map((r) => ({ bookmarkId: r.id, topicId: r.topic_id, topicTitle: r.topic.title, lessonTitle: r.topic.lesson.title }));
+}
+
+export interface SubjectProgressSummary {
+  topicsCompleted: number;
+  topicsStarted: number;
+  totalTopics: number;
+  averageMastery: number;
+  lastAccessedAt: string | null;
+}
+
+/** Real completion/mastery numbers for one subject, derived from this user's own progress rows. */
+export async function getSubjectProgressSummary(userId: string, subjectCode: string): Promise<SubjectProgressSummary> {
+  const { data: topicRows, error: topicError } = await supabase
+    .from('topics')
+    .select('id, lesson:lessons!inner(subject:subjects!inner(code))')
+    .eq('lesson.subject.code', subjectCode)
+    .returns<{ id: string }[]>();
+  if (topicError) throw topicError;
+
+  const topicIds = (topicRows ?? []).map((t) => t.id);
+  if (topicIds.length === 0) {
+    return { topicsCompleted: 0, topicsStarted: 0, totalTopics: 0, averageMastery: 0, lastAccessedAt: null };
+  }
+
+  const { data: progressRows, error: progressError } = await supabase
+    .from('progress')
+    .select('completed, mastery_score, last_accessed_at')
+    .eq('profile_id', userId)
+    .in('topic_id', topicIds)
+    .returns<{ completed: boolean; mastery_score: number | string; last_accessed_at: string | null }[]>();
+  if (progressError) throw progressError;
+
+  const rows = progressRows ?? [];
+  const topicsCompleted = rows.filter((r) => r.completed).length;
+  const averageMastery = rows.length ? Math.round(rows.reduce((sum, r) => sum + Number(r.mastery_score ?? 0), 0) / rows.length) : 0;
+  const lastAccessedAt = rows.reduce<string | null>((latest, r) => {
+    if (!r.last_accessed_at) return latest;
+    return !latest || r.last_accessed_at > latest ? r.last_accessed_at : latest;
+  }, null);
+
+  return { topicsCompleted, topicsStarted: rows.length, totalTopics: topicIds.length, averageMastery, lastAccessedAt };
+}
+
+export interface SubjectPastQuestion {
+  id: string;
+  questionText: string;
+  paperTitle: string;
+}
+
+interface RawPastQuestionRow {
+  id: string;
+  question_text: string;
+  paper: { title: string; subject: { code: string } } | null;
+}
+
+/** A handful of real past-paper questions for this subject, as a Workspace preview linking into the full Exam Center. */
+export async function getSubjectPastQuestions(subjectCode: string, limit = 5): Promise<SubjectPastQuestion[]> {
+  const { data, error } = await supabase
+    .from('questions')
+    .select('id, question_text, paper:past_papers!inner(title, subject:subjects!inner(code))')
+    .eq('paper.subject.code', subjectCode)
+    .limit(limit)
+    .returns<RawPastQuestionRow[]>();
+  if (error) throw error;
+
+  return (data ?? [])
+    .filter((r): r is RawPastQuestionRow & { paper: NonNullable<RawPastQuestionRow['paper']> } => Boolean(r.paper))
+    .map((r) => ({ id: r.id, questionText: r.question_text, paperTitle: r.paper.title }));
 }
 
 /** Trailing 7 days of activity plus the current consecutive-day streak. */

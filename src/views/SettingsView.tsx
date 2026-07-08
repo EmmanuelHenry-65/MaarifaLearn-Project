@@ -3,6 +3,7 @@ import { useTheme } from '../context/ThemeContext';
 import AccountInformationCard from '../components/settings/AccountInformationCard';
 import ChangePasswordCard from '../components/settings/ChangePasswordCard';
 import PreferencesCard from '../components/settings/PreferencesCard';
+import NotificationsCard from '../components/settings/NotificationsCard';
 import PrivacySecurityCard from '../components/settings/PrivacySecurityCard';
 import AppearanceCard from '../components/settings/AppearanceCard';
 import AboutCard from '../components/settings/AboutCard';
@@ -19,9 +20,10 @@ const TAB_ICONS: Record<Tab, string> = {
   About: 'ℹ️',
 };
 
-// Notifications isn't part of this feature yet — shown as an honest
-// placeholder rather than left silently empty.
-const PLACEHOLDER_TABS: Tab[] = ['Notifications'];
+// Every tab now has a real component — kept as an empty list (rather than
+// removing the block below) so a future new tab still gets an honest
+// placeholder instead of being silently blank.
+const PLACEHOLDER_TABS: Tab[] = [];
 
 export default function SettingsView() {
   const [activeTab, setActiveTab] = useState<Tab>('Account');
@@ -75,6 +77,8 @@ export default function SettingsView() {
             )}
 
             {activeTab === 'Preferences' && <PreferencesCard />}
+
+            {activeTab === 'Notifications' && <NotificationsCard />}
 
             {activeTab === 'Privacy & Security' && <PrivacySecurityCard />}
 
