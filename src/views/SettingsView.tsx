@@ -8,6 +8,9 @@ import PreferencesCard from '../components/settings/PreferencesCard';
 import NotificationsCard from '../components/settings/NotificationsCard';
 import DeleteAccountModal from '../components/settings/DeleteAccountModal';
 import { deleteAccount } from '../services/settings.service';
+import PrivacySecurityCard from '../components/settings/PrivacySecurityCard';
+import AppearanceCard from '../components/settings/AppearanceCard';
+import AboutCard from '../components/settings/AboutCard';
 
 const tabs = ['Account', 'Preferences', 'Notifications', 'Privacy & Security', 'Appearance', 'About'] as const;
 type Tab = (typeof tabs)[number];
@@ -21,9 +24,10 @@ const TAB_ICONS: Record<Tab, string> = {
   About: 'ℹ️',
 };
 
-// Tabs beyond Account/Preferences/Notifications aren't part of this feature
-// yet — shown as an honest placeholder rather than left silently empty.
-const PLACEHOLDER_TABS: Tab[] = ['Privacy & Security', 'Appearance', 'About'];
+// Every tab now has a real component — kept as an empty list (rather than
+// removing the block below) so a future new tab still gets an honest
+// placeholder instead of being silently blank.
+const PLACEHOLDER_TABS: Tab[] = [];
 
 export default function SettingsView() {
   const [activeTab, setActiveTab] = useState<Tab>('Account');
@@ -95,6 +99,12 @@ export default function SettingsView() {
             {activeTab === 'Preferences' && <PreferencesCard />}
 
             {activeTab === 'Notifications' && <NotificationsCard />}
+
+            {activeTab === 'Privacy & Security' && <PrivacySecurityCard />}
+
+            {activeTab === 'Appearance' && <AppearanceCard />}
+
+            {activeTab === 'About' && <AboutCard />}
 
             {PLACEHOLDER_TABS.includes(activeTab) && (
               <div className="rounded-xl border border-dashed border-[rgba(56,78,135,0.25)] p-10 text-center">

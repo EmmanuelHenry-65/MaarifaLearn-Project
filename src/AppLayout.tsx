@@ -9,7 +9,7 @@ import { usePreferencesSync } from './hooks/usePreferencesSync';
 import { useStudyReminders } from './hooks/useStudyReminders';
 
 const routeToTitle: Record<string, { title: string; subtitle: string }> = {
-  '/': { title: 'Welcome back! 👋', subtitle: '"Every day is a step closer to your goals."' },
+  '/dashboard': { title: 'Welcome back! 👋', subtitle: '"Every day is a step closer to your goals."' },
   '/my-learning': { title: 'My Learning', subtitle: 'Track your progress and continue your learning journey.' },
   '/subjects': { title: 'Subjects', subtitle: 'Explore all subjects in the CBC curriculum. Track your progress and master every topic.' },
   '/ai-tutor': { title: 'AI Tutor', subtitle: 'Your intelligent learning companion. Ask anything, learn anything.' },
@@ -23,7 +23,7 @@ const routeToTitle: Record<string, { title: string; subtitle: string }> = {
 };
 
 const pathToLabel: Record<string, string> = {
-  '/': 'Dashboard',
+  '/dashboard': 'Dashboard',
   '/my-learning': 'My Learning',
   '/subjects': 'Subjects',
   '/ai-tutor': 'AI Tutor',
@@ -76,8 +76,8 @@ export default function AppLayout() {
   const isSubjectDetail = location.pathname.startsWith('/subjects/');
   const isWorkspace = location.pathname.startsWith('/workspace');
   const key = isSubjectDetail ? '/subjects' : isWorkspace ? '/workspace' : location.pathname;
-  const meta = routeToTitle[key] || routeToTitle['/'];
-  const title = key === '/' ? `${timeOfDayGreeting()}${firstName ? `, ${firstName}` : ''}! 👋` : meta.title;
+  const meta = routeToTitle[key] || routeToTitle['/dashboard'];
+  const title = key === '/dashboard' ? `${timeOfDayGreeting()}${firstName ? `, ${firstName}` : ''}! 👋` : meta.title;
 
   const activeTab = pathToLabel[key] || 'Dashboard';
 
