@@ -28,5 +28,11 @@ export async function logout() {
 }
 
 export async function forgotPassword(email: string) {
-  return await supabase.auth.resetPasswordForEmail(email);
+  return await supabase.auth.resetPasswordForEmail(email, {
+    redirectTo: `${window.location.origin}/reset-password`,
+  });
+}
+
+export async function updatePassword(newPassword: string) {
+  return await supabase.auth.updateUser({ password: newPassword });
 }

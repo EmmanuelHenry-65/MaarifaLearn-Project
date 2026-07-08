@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { WorkspaceLesson, WorkspaceSubject, WorkspaceTopic } from '../../data/workspaceData';
 import { useTheme } from '../../context/ThemeContext';
-import { askTutor, type TutorMessage } from '../../services/aiTutor.service';
+import { askTutor, getRecentSessions, type TutorMessage, type TutorPageContext } from '../../services/aiTutor.service';
 
 interface AISidePanelProps {
   open: boolean;
@@ -20,6 +20,37 @@ export default function AISidePanel({ open, subject, lesson, topic, userId, onCl
   const [messages, setMessages] = useState<TutorMessage[]>([]);
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
+  const [loadingHistory, setLoadingHistory] = useState(true);
+
+  // Resume the learner's most recent AI Tutor conversation on open, instead of
+  // always starting blank -- the conversation is already saved server-side,
+  // this panel just never used to load it back in.
+  useEffect(() => {
+    if (!userId) {
+      setLoadingHistory(false);
+      return;
+    }
+    let cancelled = false;
+    getRecentSessions(1)
+      .then((sessions) => {
+        if (cancelled || sessions.length === 0) return;
+        setConversationId(sessions[0].id);
+        setMessages(sessions[0].messages);
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (!cancelled) setLoadingHistory(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [userId]);
+
+  const startNewChat = () => {
+    setConversationId(null);
+    setMessages([]);
+    setInput('');
+  };
 
   const textColor = theme === 'light' ? 'text-slate-900' : 'text-white';
   const mutedColor = theme === 'light' ? 'text-slate-500' : 'text-gray-400';
@@ -31,9 +62,14 @@ export default function AISidePanel({ open, subject, lesson, topic, userId, onCl
     if (!clean || !userId || sending) return;
     setInput('');
     setSending(true);
-    const contextualQuestion = `[${subject.name}${lesson ? ` → ${lesson.title}` : ''}${topic ? ` → ${topic.title}` : ''}] ${clean}`;
+    const pageContext: TutorPageContext = {
+      pageName: 'Workspace',
+      subject: { id: subject.id, name: subject.name },
+      lesson: lesson ? { id: lesson.id, title: lesson.title } : undefined,
+      topic: topic ? { id: topic.id, title: topic.title } : undefined,
+    };
     try {
-      const result = await askTutor(userId, contextualQuestion, null, conversationId);
+      const result = await askTutor(userId, clean, null, conversationId, pageContext);
       setConversationId(result.conversationId);
       setMessages((prev) => [...prev, result.userMessage, result.assistantMessage]);
     } catch {
@@ -50,9 +86,14 @@ export default function AISidePanel({ open, subject, lesson, topic, userId, onCl
           <h3 className={`font-extrabold text-lg ${textColor}`}>AI Study Assistant</h3>
           <p className={`text-xs mt-1 ${mutedColor}`}>{subject.name} • {lesson?.title ?? 'Workspace'} • {topic?.title ?? 'Current context'}</p>
         </div>
-        <button onClick={onClose} className="w-9 h-9 rounded-lg bg-cyan-500/10 border border-cyan-500/20 text-cyan-600 flex items-center justify-center">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
-        </button>
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <button onClick={startNewChat} className="px-2.5 py-2 rounded-lg bg-purple-500/10 border border-purple-500/20 text-purple-600 text-[10px] font-bold hover:bg-purple-500/20 transition-colors">
+            New Chat
+          </button>
+          <button onClick={onClose} className="w-9 h-9 rounded-lg bg-cyan-500/10 border border-cyan-500/20 text-cyan-600 flex items-center justify-center">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+          </button>
+        </div>
       </div>
 
       <div className="flex flex-wrap gap-2 mb-4">
@@ -64,7 +105,12 @@ export default function AISidePanel({ open, subject, lesson, topic, userId, onCl
       </div>
 
       <div className="h-[calc(100vh-245px)] overflow-y-auto space-y-3 pr-1">
-        {messages.length === 0 && (
+        {loadingHistory && (
+          <div className={`rounded-xl p-3 text-sm mr-8 ${theme === 'light' ? 'bg-slate-50 border border-slate-200 text-slate-500' : 'bg-[rgba(17,24,50,0.75)] border border-[rgba(56,78,135,0.18)] text-gray-400'}`}>
+            Loading your conversation...
+          </div>
+        )}
+        {!loadingHistory && messages.length === 0 && (
           <div className={`rounded-xl p-3 text-sm mr-8 ${theme === 'light' ? 'bg-slate-50 border border-slate-200 text-slate-700' : 'bg-[rgba(17,24,50,0.75)] border border-[rgba(56,78,135,0.18)] text-gray-300'}`}>
             Ask me anything about {subject.name}{lesson ? ` — ${lesson.title}` : ''}.
           </div>

@@ -161,6 +161,13 @@ export async function removeAvatar(userId: string): Promise<void> {
   if (error) throw new SettingsError('Could not remove your profile picture.');
 }
 
+/** Permanently deletes the current user's account and all owned data via the delete-account Edge Function. */
+export async function deleteAccount(): Promise<void> {
+  const { data, error } = await supabase.functions.invoke<{ success?: boolean; error?: string }>('delete-account');
+  if (error) throw new SettingsError('Could not delete your account. Please try again.');
+  if (!data?.success) throw new SettingsError(data?.error ?? 'Could not delete your account. Please try again.');
+}
+
 /**
  * Security requirement: the current password must be re-verified (via a
  * fresh sign-in) before a new one is accepted — a user who leaves a session

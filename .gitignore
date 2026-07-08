@@ -31,3 +31,6 @@ pnpm-debug.log*
 
 # Supabase CLI local link state
 supabase/.temp/
+
+# Claude Code personal settings
+.claude/settings.local.json

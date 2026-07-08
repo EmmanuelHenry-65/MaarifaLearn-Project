@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useExamData } from '../hooks/useExamData';
 import {
@@ -8,6 +8,8 @@ import {
   getPaperQuestions,
   getReviewQuestions,
   getAttemptAnswers,
+  gradeShortAnswers,
+  saveAttemptDraft,
   type ExamPaper,
   type ExamQuestion,
   type AttemptResult,
@@ -44,6 +46,7 @@ const initialFilters: ExamFilterState = {
 export default function ExamsView() {
   const { theme } = useTheme();
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { subjects, papers, bookmarkedIds, toggleBookmark, refresh, loading } = useExamData();
 
@@ -57,6 +60,7 @@ export default function ExamsView() {
   const [attemptStartedAt, setAttemptStartedAt] = useState<number | null>(null);
   const [attemptResult, setAttemptResult] = useState<AttemptResult | null>(null);
   const [gradedAnswers, setGradedAnswers] = useState<GradedAnswer[]>([]);
+  const [gradingEssays, setGradingEssays] = useState(false);
   const [reviewQuestions, setReviewQuestions] = useState<ExamQuestion[]>([]);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [flags, setFlags] = useState<Record<string, boolean>>({});
@@ -98,6 +102,18 @@ export default function ExamsView() {
     setSelectedSubject(subjects[0].id);
   }, [subjects, selectedSubject]);
 
+  // Autosave in-progress answers a couple seconds after the student stops
+  // typing/selecting, so closing the tab mid-exam no longer loses everything.
+  useEffect(() => {
+    if (screen !== 'attempt' || !attemptId) return;
+    const timer = setTimeout(() => {
+      saveAttemptDraft(attemptId, answers).catch(() => {
+        // Best-effort -- the next autosave (or final submit) will retry.
+      });
+    }, 2500);
+    return () => clearTimeout(timer);
+  }, [answers, attemptId, screen]);
+
   const currentSubject = subjects.find((subject) => subject.id === selectedSubject) ?? subjects[0];
   const subjectPapers = useMemo(() => papers.filter((paper) => paper.subjectId === selectedSubject), [papers, selectedSubject]);
 
@@ -118,6 +134,29 @@ export default function ExamsView() {
       return (b.year ?? 0) - (a.year ?? 0);
     });
   }, [filters, subjectPapers]);
+
+  // "Recent" = papers this user has actually attempted, newest attempt first.
+  const recentExams = useMemo(
+    () =>
+      [...subjectPapers]
+        .filter((p) => p.lastAttemptAt)
+        .sort((a, b) => new Date(b.lastAttemptAt!).getTime() - new Date(a.lastAttemptAt!).getTime())
+        .slice(0, 3),
+    [subjectPapers],
+  );
+
+  // "Recommended" = papers worth trying next: not-yet-attempted papers first
+  // (there's nothing to recommend more strongly than a paper never tried),
+  // then previously-attempted papers with the lowest scores (most room to
+  // improve), excluding anything already shown in Recent Exams above.
+  const recommendedPapers = useMemo(() => {
+    const recentIds = new Set(recentExams.map((p) => p.id));
+    const notStarted = subjectPapers.filter((p) => p.completionStatus === 'Not Started');
+    const weakestAttempted = [...subjectPapers]
+      .filter((p) => p.latestScore !== null && !recentIds.has(p.id))
+      .sort((a, b) => (a.latestScore ?? 0) - (b.latestScore ?? 0));
+    return [...notStarted, ...weakestAttempted].filter((p) => !recentIds.has(p.id)).slice(0, 3);
+  }, [subjectPapers, recentExams]);
 
   const textColor = theme === 'light' ? 'text-slate-900' : 'text-white';
   const mutedColor = theme === 'light' ? 'text-slate-500' : 'text-gray-400';
@@ -140,11 +179,15 @@ export default function ExamsView() {
         startAttempt(user.id, paper.id),
         activePaper?.id === paper.id && activeQuestions.length ? Promise.resolve(activeQuestions) : getPaperQuestions(paper.id),
       ]);
+      // startAttempt resumes an existing in_progress attempt if one exists,
+      // so re-fetch any previously autosaved draft answers -- this is a
+      // no-op (empty array) for a genuinely new attempt.
+      const draft = await getAttemptAnswers(id).catch(() => []);
       setAttemptId(id);
       setActiveQuestions(questions);
       setActivePaper(paper);
       setExamMode(mode);
-      setAnswers({});
+      setAnswers(Object.fromEntries(draft.filter((a) => a.answer).map((a) => [a.questionId, a.answer])));
       setFlags({});
       setQuestionBookmarks({});
       setAttemptResult(null);
@@ -154,6 +197,24 @@ export default function ExamsView() {
       setNotice(mode === 'authentic' ? 'Authentic exam mode started. AI guidance disabled.' : 'AI guided mode started. Socratic tutor is available.');
     } catch {
       setNotice('Could not start the exam — please try again.');
+    }
+  };
+
+  // submit_exam_attempt() can't grade short-answer/essay questions itself (a
+  // plain SQL function can't call an LLM) -- this runs the AI grading pass
+  // and refreshes the results once it's done. Best-effort: if it fails, the
+  // auto-graded score already shown still stands, and the caller can retry
+  // by calling this again (retryGrading below does exactly that from the UI).
+  const runGrading = async (idToGrade: string) => {
+    setGradingEssays(true);
+    try {
+      const finalResult = await gradeShortAnswers(idToGrade);
+      setAttemptResult(finalResult);
+      setGradedAnswers(await getAttemptAnswers(idToGrade));
+    } catch {
+      setNotice('AI grading failed — you can retry it from the results screen.');
+    } finally {
+      setGradingEssays(false);
     }
   };
 
@@ -170,9 +231,17 @@ export default function ExamsView() {
       setReviewQuestions(review);
       setScreen('results');
       refresh();
+
+      const hasUngraded = graded.some((a) => a.isCorrect === null);
+      if (hasUngraded) await runGrading(attemptId);
     } catch {
       setNotice('Could not submit the exam — please try again.');
     }
+  };
+
+  const retryGrading = () => {
+    if (!attemptId || gradingEssays) return;
+    runGrading(attemptId);
   };
 
   const downloadPaper = (paper: ExamPaper) => {
@@ -222,8 +291,8 @@ export default function ExamsView() {
         <div className="flex-1 overflow-y-auto pr-1">
           <ExamDashboard
             currentSubject={currentSubject}
-            recentExams={subjectPapers.slice(0, 3)}
-            recommendedPapers={subjectPapers.slice(0, 3)}
+            recentExams={recentExams}
+            recommendedPapers={recommendedPapers}
             onContinue={(paper) => startExam(paper, 'authentic')}
             onSelectRecommended={previewPaper}
           />
@@ -338,8 +407,10 @@ export default function ExamsView() {
           gradedAnswers={gradedAnswers}
           result={attemptResult}
           elapsedMinutes={elapsedMinutes}
+          gradingEssays={gradingEssays}
           onReview={() => setScreen('review')}
           onRetry={() => startExam(activePaper, examMode)}
+          onRetryGrading={retryGrading}
           onBack={() => setScreen('dashboard')}
         />
       )}
@@ -351,7 +422,16 @@ export default function ExamsView() {
           answers={answers}
           gradedAnswers={gradedAnswers}
           onBackToResults={() => setScreen('results')}
-          onGenerateSimilar={() => setNotice('Similar question generated and added to practice recommendations.')}
+          onOpenRelatedLesson={() => activePaper && navigate(`/workspace/${activePaper.subjectCode}`)}
+          onGenerateSimilar={(questionId) => {
+            if (!activePaper) return;
+            const reviewed = reviewQuestions.length ? reviewQuestions : activeQuestions;
+            const target = reviewed.find((item) => item.id === questionId);
+            const prompt = target
+              ? `Give me a new practice question similar to this one, testing the same concept: "${target.questionText}" (${activePaper.subjectName}).`
+              : `Give me a new practice question on ${activePaper.subjectName}.`;
+            navigate(`/ai-tutor?q=${encodeURIComponent(prompt)}`);
+          }}
         />
       )}
 

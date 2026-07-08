@@ -18,7 +18,27 @@ export interface TutorMessage {
 
 export interface TutorSession {
   id: string;
+  title: string | null;
+  createdAt: string;
   messages: TutorMessage[];
+}
+
+/**
+ * What the learner is currently looking at in the app -- the one piece of
+ * context that genuinely can't be recovered server-side (it's ephemeral UI
+ * state, not persisted anywhere). Everything else (profile, progress, exam
+ * history, streak, achievements...) the Edge Function fetches itself from
+ * the DB, keyed by the authenticated profile_id, so callers don't need to
+ * gather or duplicate it here.
+ */
+export interface TutorPageContext {
+  pageName?: string;
+  subject?: { id?: string; name: string };
+  lesson?: { id?: string; title: string };
+  topic?: { id?: string; title: string };
+  pastPaper?: { id?: string; title: string };
+  examQuestion?: { id?: string; text: string };
+  examMode?: string;
 }
 
 export const FALLBACK_ANSWER =
@@ -26,12 +46,6 @@ export const FALLBACK_ANSWER =
 
 const SIGNED_URL_TTL_SECONDS = 60 * 60;
 export const MAX_ATTACHMENT_BYTES = 10 * 1024 * 1024;
-
-// A follow-up question within this window continues the same conversation
-// (so a real AI can eventually see the whole exchange as context, the way a
-// Socratic back-and-forth needs to); after this long a gap, the next
-// question starts a fresh conversation instead.
-const SESSION_CONTINUATION_WINDOW_MS = 30 * 60 * 1000;
 
 interface RawMessageRow {
   id: string;
@@ -44,6 +58,8 @@ interface RawMessageRow {
 
 interface RawConversationRow {
   id: string;
+  title: string | null;
+  created_at: string;
   messages: RawMessageRow[];
 }
 
@@ -85,7 +101,7 @@ export async function uploadAttachment(userId: string, file: File): Promise<Tuto
 export async function getRecentSessions(limit = 10): Promise<TutorSession[]> {
   const { data, error } = await supabase
     .from('conversations')
-    .select('id, messages ( id, sender, content, created_at, attachment_path, attachment_name )')
+    .select('id, title, created_at, messages ( id, sender, content, created_at, attachment_path, attachment_name )')
     .order('created_at', { ascending: false })
     .limit(limit)
     .returns<RawConversationRow[]>();
@@ -109,17 +125,12 @@ export async function getRecentSessions(limit = 10): Promise<TutorSession[]> {
 
   return rows.map((row) => ({
     id: row.id,
+    title: row.title,
+    createdAt: row.created_at,
     messages: [...row.messages]
       .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
       .map((m) => toTutorMessage(m, signedUrlByPath)),
   }));
-}
-
-/** Whether a follow-up question should continue this session rather than start a new one. */
-export function isSessionContinuable(session: TutorSession | undefined): session is TutorSession {
-  if (!session || session.messages.length === 0) return false;
-  const lastMessageAt = new Date(session.messages[session.messages.length - 1].createdAt).getTime();
-  return Date.now() - lastMessageAt < SESSION_CONTINUATION_WINDOW_MS;
 }
 
 /**
@@ -134,6 +145,7 @@ export async function askTutor(
   questionText: string,
   attachment: TutorAttachment | null = null,
   existingConversationId: string | null = null,
+  pageContext: TutorPageContext | null = null,
 ): Promise<{ conversationId: string; userMessage: TutorMessage; assistantMessage: TutorMessage }> {
   const displayText = questionText || `Uploaded ${attachment?.name ?? 'a file'}`;
 
@@ -164,7 +176,13 @@ export async function askTutor(
   let answer = FALLBACK_ANSWER;
   try {
     const { data, error } = await supabase.functions.invoke<{ answer: string; error?: string }>('ai-tutor-chat', {
-      body: { conversationId, question: displayText, attachmentPath: attachment?.path, attachmentName: attachment?.name },
+      body: {
+        conversationId,
+        question: displayText,
+        attachmentPath: attachment?.path,
+        attachmentName: attachment?.name,
+        context: pageContext ?? undefined,
+      },
     });
     if (error) throw error;
     if (data?.answer) answer = data.answer;

@@ -6,6 +6,8 @@ import type {
   SubjectPastQuestion,
   SubjectProgressSummary,
   SubjectResource,
+  TopicFlashcard,
+  TopicProgressBySlug,
   WorkspaceNoteRow,
 } from '../../services/learning.service';
 import {
@@ -13,6 +15,8 @@ import {
   deleteNote,
   getSubjectBookmarkedTopics,
   getSubjectPastQuestions,
+  getTopicContent,
+  getTopicFlashcards,
   getTopicNotes,
   toggleNotePinned,
 } from '../../services/learning.service';
@@ -32,6 +36,7 @@ interface LessonContentProps {
   progressSummary: SubjectProgressSummary | null;
   progressLoading: boolean;
   progressBump: number;
+  topicProgress: TopicProgressBySlug;
   onProgressBump: () => void;
 }
 
@@ -47,6 +52,7 @@ export default function LessonContent({
   progressSummary,
   progressLoading,
   progressBump,
+  topicProgress,
   onProgressBump,
 }: LessonContentProps) {
   const { theme } = useTheme();
@@ -116,30 +122,21 @@ export default function LessonContent({
             </button>
           </div>
           <div className="mt-5 grid grid-cols-3 gap-3">
-            {currentLesson.topics.map((topic) => (
-              <div key={topic.id} className={`rounded-xl border p-3 ${softBg}`}>
-                <p className={`text-sm font-bold ${textColor}`}>{topic.title}</p>
-                <p className={`text-xs mt-1 ${mutedColor}`}>{topic.duration}</p>
-                <div className={`mt-2 h-1.5 rounded-full overflow-hidden ${barBg}`}>
-                  <div className="h-full bg-gradient-to-r from-cyan-500 to-blue-500 rounded-full" style={{ width: `${topic.mastery}%` }} />
+            {currentLesson.topics.map((topic) => {
+              const mastery = topicProgress[topic.id]?.masteryScore ?? 0;
+              return (
+                <div key={topic.id} className={`rounded-xl border p-3 ${softBg}`}>
+                  <p className={`text-sm font-bold ${textColor}`}>{topic.title}</p>
+                  <p className={`text-xs mt-1 ${mutedColor}`}>{topic.duration}</p>
+                  <div className={`mt-2 h-1.5 rounded-full overflow-hidden ${barBg}`}>
+                    <div className="h-full bg-gradient-to-r from-cyan-500 to-blue-500 rounded-full" style={{ width: `${mastery}%` }} />
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
-        <div className={`rounded-2xl border p-5 ${panelBg}`}>
-          <h4 className={`font-bold text-base ${textColor}`}>Lesson Viewer</h4>
-          <p className={`mt-2 text-sm leading-relaxed ${mutedColor}`}>
-            This workspace combines concise lesson notes, guided examples, practice activities, and AI-ready context. Learners can highlight ideas, save notes, bookmark content, or jump into practice without leaving the lesson.
-          </p>
-          <div className="mt-4 grid grid-cols-2 gap-3">
-            {['Highlight key sentence', 'Bookmark lesson', 'Open worked example', 'Start reflection'].map((action) => (
-              <button key={action} onClick={onProgressBump} className="px-3 py-2 rounded-lg bg-cyan-500/10 border border-cyan-500/20 text-cyan-600 text-xs font-bold hover:bg-cyan-500/20 transition-colors">
-                {action}
-              </button>
-            ))}
-          </div>
-        </div>
+        <LessonViewerPanel topicId={resolvedTopicId} textColor={textColor} mutedColor={mutedColor} panelBg={panelBg} softBg={softBg} onProgressBump={onProgressBump} />
       </div>
     );
   }
@@ -159,7 +156,7 @@ export default function LessonContent({
   }
 
   if (activeMode === 'flashcards') {
-    return <EmptyStatePanel title="Flashcards" textColor={textColor} mutedColor={mutedColor} message="AI-generated flashcards for this topic aren't built yet — this needs the flashcard-generation pipeline wired up before it can show real content." />;
+    return <FlashcardsPanel topicId={resolvedTopicId} topicLabel={currentTopic.title} textColor={textColor} mutedColor={mutedColor} panelBg={panelBg} />;
   }
 
   if (activeMode === 'practice') {
@@ -215,6 +212,153 @@ function formatRelative(iso: string | null): string {
   const diffHours = Math.round(diffMins / 60);
   if (diffHours < 24) return `${diffHours}h ago`;
   return `${Math.round(diffHours / 24)}d ago`;
+}
+
+function LessonViewerPanel({
+  topicId,
+  textColor,
+  mutedColor,
+  panelBg,
+  softBg,
+  onProgressBump,
+}: {
+  topicId: string | null;
+  textColor: string;
+  mutedColor: string;
+  panelBg: string;
+  softBg: string;
+  onProgressBump: () => void;
+}) {
+  const [explanation, setExplanation] = useState<string | null>(null);
+  const [workedExample, setWorkedExample] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!topicId) {
+      setExplanation(null);
+      setWorkedExample(null);
+      setLoading(false);
+      return;
+    }
+    let cancelled = false;
+    setLoading(true);
+    getTopicContent(topicId)
+      .then((content) => {
+        if (cancelled) return;
+        setExplanation(content?.explanation ?? null);
+        setWorkedExample(content?.workedExample ?? null);
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setExplanation(null);
+          setWorkedExample(null);
+        }
+      })
+      .finally(() => !cancelled && setLoading(false));
+    return () => {
+      cancelled = true;
+    };
+  }, [topicId]);
+
+  return (
+    <div className={`rounded-2xl border p-5 ${panelBg}`}>
+      <h4 className={`font-bold text-base ${textColor}`}>Lesson Viewer</h4>
+      {loading ? (
+        <p className={`mt-2 text-sm ${mutedColor}`}>Loading...</p>
+      ) : explanation ? (
+        <>
+          <p className={`mt-2 text-sm leading-relaxed whitespace-pre-line ${mutedColor}`}>{explanation}</p>
+          {workedExample && (
+            <div className={`mt-4 rounded-xl border p-4 ${softBg}`}>
+              <p className={`text-xs font-bold uppercase tracking-wider text-cyan-600`}>Worked Example</p>
+              <p className={`mt-2 text-sm leading-relaxed whitespace-pre-line ${mutedColor}`}>{workedExample}</p>
+            </div>
+          )}
+        </>
+      ) : (
+        <p className={`mt-2 text-sm leading-relaxed ${mutedColor}`}>
+          Real lesson content for this topic hasn't been written yet — check back soon.
+        </p>
+      )}
+      <div className="mt-4 grid grid-cols-2 gap-3">
+        {['Highlight key sentence', 'Bookmark lesson', 'Open worked example', 'Start reflection'].map((action) => (
+          <button key={action} onClick={onProgressBump} className="px-3 py-2 rounded-lg bg-cyan-500/10 border border-cyan-500/20 text-cyan-600 text-xs font-bold hover:bg-cyan-500/20 transition-colors">
+            {action}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function FlashcardsPanel({
+  topicId,
+  topicLabel,
+  textColor,
+  mutedColor,
+  panelBg,
+}: {
+  topicId: string | null;
+  topicLabel: string;
+  textColor: string;
+  mutedColor: string;
+  panelBg: string;
+}) {
+  const [cards, setCards] = useState<TopicFlashcard[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [flipped, setFlipped] = useState<Record<string, boolean>>({});
+
+  useEffect(() => {
+    if (!topicId) {
+      setCards([]);
+      setLoading(false);
+      return;
+    }
+    let cancelled = false;
+    setLoading(true);
+    getTopicFlashcards(topicId)
+      .then((rows) => !cancelled && setCards(rows))
+      .catch(() => !cancelled && setCards([]))
+      .finally(() => !cancelled && setLoading(false));
+    return () => {
+      cancelled = true;
+    };
+  }, [topicId]);
+
+  if (loading) {
+    return (
+      <div className="glass-card p-5">
+        <h3 className={`font-bold text-lg mb-2 ${textColor}`}>Flashcards</h3>
+        <p className={`text-sm ${mutedColor}`}>Loading...</p>
+      </div>
+    );
+  }
+
+  if (cards.length === 0) {
+    return <EmptyStatePanel title="Flashcards" textColor={textColor} mutedColor={mutedColor} message={`Real flashcards for ${topicLabel} aren't available yet — check back soon.`} />;
+  }
+
+  return (
+    <div className="glass-card p-5">
+      <h3 className={`font-bold text-lg mb-1 ${textColor}`}>Flashcards — {topicLabel}</h3>
+      <p className={`text-xs mb-4 ${mutedColor}`}>Click a card to flip it.</p>
+      <div className="grid grid-cols-2 gap-3">
+        {cards.map((card) => {
+          const isFlipped = Boolean(flipped[card.id]);
+          return (
+            <button
+              key={card.id}
+              onClick={() => setFlipped((prev) => ({ ...prev, [card.id]: !prev[card.id] }))}
+              className={`text-left rounded-xl border p-4 min-h-[110px] ${panelBg} hover:border-cyan-500/30 transition-all`}
+            >
+              <p className="text-cyan-600 text-[10px] font-bold uppercase tracking-wider mb-2">{isFlipped ? 'Answer' : 'Question'}</p>
+              <p className={`text-sm leading-relaxed ${textColor}`}>{isFlipped ? card.answer : card.question}</p>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
 }
 
 function NotesPanel({

@@ -1,9 +1,13 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext';
+import { useAuth } from '../context/AuthContext';
 import AccountInformationCard from '../components/settings/AccountInformationCard';
 import ChangePasswordCard from '../components/settings/ChangePasswordCard';
 import PreferencesCard from '../components/settings/PreferencesCard';
 import NotificationsCard from '../components/settings/NotificationsCard';
+import DeleteAccountModal from '../components/settings/DeleteAccountModal';
+import { deleteAccount } from '../services/settings.service';
 import PrivacySecurityCard from '../components/settings/PrivacySecurityCard';
 import AppearanceCard from '../components/settings/AppearanceCard';
 import AboutCard from '../components/settings/AboutCard';
@@ -27,7 +31,16 @@ const PLACEHOLDER_TABS: Tab[] = [];
 
 export default function SettingsView() {
   const [activeTab, setActiveTab] = useState<Tab>('Account');
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
   const { theme } = useTheme();
+  const { signOut } = useAuth();
+  const navigate = useNavigate();
+
+  async function handleDeleteAccount() {
+    await deleteAccount();
+    await signOut();
+    navigate('/login');
+  }
 
   const textColor = theme === 'light' ? 'text-slate-900' : 'text-white';
   const labelColor = theme === 'light' ? 'text-slate-500' : 'text-gray-500';
@@ -69,11 +82,18 @@ export default function SettingsView() {
                     <h3 className="text-red-500 font-bold text-base">Danger Zone</h3>
                     <p className="text-gray-500 text-xs mt-1">Once you delete your account, there is no going back. Please be certain.</p>
                   </div>
-                  <button className="self-start px-4 py-2 rounded-lg bg-red-500/10 border border-red-500/40 text-red-500 text-xs font-bold hover:bg-red-500/20 transition-colors">
+                  <button
+                    onClick={() => setShowDeleteModal(true)}
+                    className="self-start px-4 py-2 rounded-lg bg-red-500/10 border border-red-500/40 text-red-500 text-xs font-bold hover:bg-red-500/20 transition-colors"
+                  >
                     Delete Account
                   </button>
                 </div>
               </>
+            )}
+
+            {showDeleteModal && (
+              <DeleteAccountModal onConfirm={handleDeleteAccount} onClose={() => setShowDeleteModal(false)} />
             )}
 
             {activeTab === 'Preferences' && <PreferencesCard />}

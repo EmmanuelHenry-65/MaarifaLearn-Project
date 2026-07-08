@@ -433,6 +433,40 @@ export async function getSubjectPastQuestions(subjectCode: string, limit = 5): P
     .map((r) => ({ id: r.id, questionText: r.question_text, paperTitle: r.paper.title }));
 }
 
+const WORKED_EXAMPLE_MARKER = '\n\n<<<WORKED_EXAMPLE>>>\n\n';
+
+export interface TopicContent {
+  explanation: string;
+  workedExample: string | null;
+}
+
+/** Real explanation + worked example for a topic, or null if none has been written yet. */
+export async function getTopicContent(topicId: string): Promise<TopicContent | null> {
+  const { data, error } = await supabase.from('topics').select('description').eq('id', topicId).maybeSingle<{ description: string | null }>();
+  if (error) throw error;
+  if (!data?.description) return null;
+
+  const [explanation, workedExample] = data.description.split(WORKED_EXAMPLE_MARKER);
+  return { explanation: explanation.trim(), workedExample: workedExample?.trim() ?? null };
+}
+
+export interface TopicFlashcard {
+  id: string;
+  question: string;
+  answer: string;
+}
+
+/** Real curriculum flashcards for a topic (shared across all learners), or an empty list if none exist yet. */
+export async function getTopicFlashcards(topicId: string): Promise<TopicFlashcard[]> {
+  const { data, error } = await supabase
+    .from('topic_flashcards')
+    .select('id, question, answer')
+    .eq('topic_id', topicId)
+    .order('card_order', { ascending: true });
+  if (error) throw error;
+  return data ?? [];
+}
+
 /** Trailing 7 days of activity plus the current consecutive-day streak. */
 export function computeStreak(topics: LearningTopic[]): StreakInfo {
   const activeDates = new Set(

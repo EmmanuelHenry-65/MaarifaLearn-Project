@@ -87,6 +87,7 @@ export default function ExamDashboard({ currentSubject, recentExams, recommended
           <h3 className={`font-bold text-base ${textColor}`}>Recommended Papers</h3>
           <span className="text-cyan-600 text-xs font-bold">Personalized</span>
         </div>
+        {recommendedPapers.length === 0 && <p className={`text-xs ${mutedColor}`}>No papers yet for this subject.</p>}
         <div className="grid grid-cols-3 gap-3">
           {recommendedPapers.map((paper) => (
             <button key={paper.id} onClick={() => onSelectRecommended(paper)} className={`text-left rounded-xl border p-3 hover:border-cyan-500/30 transition-all ${itemBg}`}>
