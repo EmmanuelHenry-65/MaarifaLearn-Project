@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
+import { supabase } from '../lib/supabase';
 import { getProfile, updateGrade, type ProfileInfo } from '../services/learning.service';
 import { getNotifications, getUnreadCount, markAllRead, type AppNotification } from '../services/notifications.service';
 import ThemeToggle from './ThemeToggle';
@@ -108,6 +109,22 @@ export default function TopNav({ title, subtitle, onMenuClick }: TopNavProps) {
     if (!user) return;
     getProfile(user.id).then((p) => p && setProfile(p)).catch(() => {});
     getUnreadCount(user.id).then(setUnreadCount).catch(() => {});
+
+    // Live update: a notification created elsewhere in the same session
+    // (a study reminder, a newly-earned badge) bumps the badge instantly
+    // instead of waiting for the next page load/reload to notice it.
+    const channel = supabase
+      .channel(`notifications-${user.id}`)
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'notifications', filter: `profile_id=eq.${user.id}` },
+        () => setUnreadCount((count) => count + 1),
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [user]);
 
   function showComingSoon(message: string) {
@@ -245,13 +262,20 @@ export default function TopNav({ title, subtitle, onMenuClick }: TopNavProps) {
 
         {/* Notification */}
         <div className="relative">
-          <button onClick={() => toggleMenu('notifications')} className={`relative p-2.5 rounded-xl border transition-all ${theme === 'light' ? 'bg-white border-slate-200 text-slate-500 hover:text-cyan-600 hover:border-slate-300 shadow-sm' : 'bg-[rgba(17,24,50,0.8)] border-[rgba(56,78,135,0.3)] text-gray-400 hover:text-white hover:border-[rgba(56,78,135,0.5)]'}`}>
+          <button
+            onClick={() => toggleMenu('notifications')}
+            className={`relative p-2.5 rounded-xl border transition-all ${unreadCount > 0 ? 'animate-pulse-glow' : ''} ${theme === 'light' ? 'bg-white border-slate-200 text-slate-500 hover:text-cyan-600 hover:border-slate-300 shadow-sm' : 'bg-[rgba(17,24,50,0.8)] border-[rgba(56,78,135,0.3)] text-gray-400 hover:text-white hover:border-[rgba(56,78,135,0.5)]'}`}
+          >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
               <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9" />
               <path d="M13.73 21a2 2 0 01-3.46 0" />
             </svg>
             {unreadCount > 0 && (
-              <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-cyan-400 rounded-full shadow-[0_0_6px_rgba(34,211,238,0.8)]" />
+              <span
+                className={`absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-1 flex items-center justify-center rounded-full bg-red-500 text-white text-[10px] font-bold leading-none ring-2 ${theme === 'light' ? 'ring-white' : 'ring-[#0a0e1a]'}`}
+              >
+                {unreadCount > 9 ? '9+' : unreadCount}
+              </span>
             )}
           </button>
           {openMenu === 'notifications' && (

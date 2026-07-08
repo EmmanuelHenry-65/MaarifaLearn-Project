@@ -3,6 +3,7 @@ import { useTheme } from '../context/ThemeContext';
 import AccountInformationCard from '../components/settings/AccountInformationCard';
 import ChangePasswordCard from '../components/settings/ChangePasswordCard';
 import PreferencesCard from '../components/settings/PreferencesCard';
+import NotificationsCard from '../components/settings/NotificationsCard';
 
 const tabs = ['Account', 'Preferences', 'Notifications', 'Privacy & Security', 'Appearance', 'About'] as const;
 type Tab = (typeof tabs)[number];
@@ -16,9 +17,9 @@ const TAB_ICONS: Record<Tab, string> = {
   About: 'ℹ️',
 };
 
-// Tabs beyond Account/Preferences aren't part of this feature yet — shown as
-// an honest placeholder rather than left silently empty.
-const PLACEHOLDER_TABS: Tab[] = ['Notifications', 'Privacy & Security', 'Appearance', 'About'];
+// Tabs beyond Account/Preferences/Notifications aren't part of this feature
+// yet — shown as an honest placeholder rather than left silently empty.
+const PLACEHOLDER_TABS: Tab[] = ['Privacy & Security', 'Appearance', 'About'];
 
 export default function SettingsView() {
   const [activeTab, setActiveTab] = useState<Tab>('Account');
@@ -72,6 +73,8 @@ export default function SettingsView() {
             )}
 
             {activeTab === 'Preferences' && <PreferencesCard />}
+
+            {activeTab === 'Notifications' && <NotificationsCard />}
 
             {PLACEHOLDER_TABS.includes(activeTab) && (
               <div className="rounded-xl border border-dashed border-[rgba(56,78,135,0.25)] p-10 text-center">

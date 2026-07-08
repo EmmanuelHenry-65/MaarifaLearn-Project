@@ -76,7 +76,8 @@ export default function StudyPlannerView() {
     return () => {
       cancelled = true;
     };
-  }, [user]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id]);
 
   const weekSummary = useMemo(() => computeWeekSummary(tasks, weekStart), [tasks, weekStart]);
   const streak = useMemo(() => computeStreak(tasks), [tasks]);

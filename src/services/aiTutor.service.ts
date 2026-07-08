@@ -6,21 +6,35 @@ export interface TutorAttachment {
   signedUrl: string | null;
 }
 
-export interface TutorConversation {
+export type MessageSender = 'user' | 'assistant';
+
+export interface TutorMessage {
   id: string;
-  question: string;
-  answer: string;
+  sender: MessageSender;
+  content: string;
   createdAt: string;
   attachment: TutorAttachment | null;
 }
 
-export const PLACEHOLDER_ANSWER =
-  'Thanks for asking! Real AI-powered answers are coming soon — this is a placeholder reply while the AI model integration is being built.';
+export interface TutorSession {
+  id: string;
+  messages: TutorMessage[];
+}
+
+export const FALLBACK_ANSWER =
+  "Sorry, I couldn't reach the AI Tutor just now. Please try asking again in a moment.";
 
 const SIGNED_URL_TTL_SECONDS = 60 * 60;
 export const MAX_ATTACHMENT_BYTES = 10 * 1024 * 1024;
 
+// A follow-up question within this window continues the same conversation
+// (so a real AI can eventually see the whole exchange as context, the way a
+// Socratic back-and-forth needs to); after this long a gap, the next
+// question starts a fresh conversation instead.
+const SESSION_CONTINUATION_WINDOW_MS = 30 * 60 * 1000;
+
 interface RawMessageRow {
+  id: string;
   sender: string;
   content: string;
   created_at: string;
@@ -30,8 +44,23 @@ interface RawMessageRow {
 
 interface RawConversationRow {
   id: string;
-  created_at: string;
   messages: RawMessageRow[];
+}
+
+function toTutorMessage(row: RawMessageRow, signedUrlByPath: Map<string, string>): TutorMessage {
+  return {
+    id: row.id,
+    sender: row.sender === 'assistant' ? 'assistant' : 'user',
+    content: row.content,
+    createdAt: row.created_at,
+    attachment: row.attachment_path
+      ? {
+          path: row.attachment_path,
+          name: row.attachment_name ?? 'Attachment',
+          signedUrl: signedUrlByPath.get(row.attachment_path) ?? null,
+        }
+      : null,
+  };
 }
 
 /** Uploads a file to the private 'documents' bucket under the user's own folder and returns a signed URL. */
@@ -52,11 +81,11 @@ export async function uploadAttachment(userId: string, file: File): Promise<Tuto
   return { path, name: file.name, signedUrl: signed.signedUrl };
 }
 
-/** Most recent conversations for the current user (RLS scopes to their own), reduced to a question/answer pair. */
-export async function getRecentConversations(limit = 10): Promise<TutorConversation[]> {
+/** Most recent conversation sessions for the current user (RLS scopes to their own), each with its full message history. */
+export async function getRecentSessions(limit = 10): Promise<TutorSession[]> {
   const { data, error } = await supabase
     .from('conversations')
-    .select('id, created_at, messages ( sender, content, created_at, attachment_path, attachment_name )')
+    .select('id, messages ( id, sender, content, created_at, attachment_path, attachment_name )')
     .order('created_at', { ascending: false })
     .limit(limit)
     .returns<RawConversationRow[]>();
@@ -78,67 +107,92 @@ export async function getRecentConversations(limit = 10): Promise<TutorConversat
     });
   }
 
-  return rows.map((row) => {
-    const sorted = [...row.messages].sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
-    const userMessage = sorted.find((m) => m.sender === 'user');
-    const assistantMessage = sorted.find((m) => m.sender === 'assistant');
-
-    const attachment: TutorAttachment | null = userMessage?.attachment_path
-      ? {
-          path: userMessage.attachment_path,
-          name: userMessage.attachment_name ?? 'Attachment',
-          signedUrl: signedUrlByPath.get(userMessage.attachment_path) ?? null,
-        }
-      : null;
-
-    return {
-      id: row.id,
-      question: userMessage?.content ?? '',
-      answer: assistantMessage?.content ?? '',
-      createdAt: row.created_at,
-      attachment,
-    };
-  });
+  return rows.map((row) => ({
+    id: row.id,
+    messages: [...row.messages]
+      .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
+      .map((m) => toTutorMessage(m, signedUrlByPath)),
+  }));
 }
 
-/** Creates a new conversation holding the user's question (and/or attachment) and a placeholder assistant reply. */
+/** Whether a follow-up question should continue this session rather than start a new one. */
+export function isSessionContinuable(session: TutorSession | undefined): session is TutorSession {
+  if (!session || session.messages.length === 0) return false;
+  const lastMessageAt = new Date(session.messages[session.messages.length - 1].createdAt).getTime();
+  return Date.now() - lastMessageAt < SESSION_CONTINUATION_WINDOW_MS;
+}
+
+/**
+ * Adds a question (and/or attachment) to a conversation, asks the real AI
+ * Tutor (ai-tutor-chat Edge Function -- Socratic RAG over the student's own
+ * uploaded materials) for a reply, and stores both messages - continuing
+ * `existingConversationId` if given, otherwise starting a new conversation
+ * first.
+ */
 export async function askTutor(
   userId: string,
   questionText: string,
   attachment: TutorAttachment | null = null,
-): Promise<TutorConversation> {
+  existingConversationId: string | null = null,
+): Promise<{ conversationId: string; userMessage: TutorMessage; assistantMessage: TutorMessage }> {
   const displayText = questionText || `Uploaded ${attachment?.name ?? 'a file'}`;
 
-  const { data: conversation, error: convError } = await supabase
-    .from('conversations')
-    .insert({ profile_id: userId, title: displayText.slice(0, 80) })
-    .select('id, created_at')
-    .single();
-  if (convError) throw convError;
+  let conversationId = existingConversationId;
+  if (!conversationId) {
+    const { data: conversation, error: convError } = await supabase
+      .from('conversations')
+      .insert({ profile_id: userId, title: displayText.slice(0, 80) })
+      .select('id')
+      .single<{ id: string }>();
+    if (convError) throw convError;
+    conversationId = conversation.id;
+  }
 
-  const { error: msgError } = await supabase.from('messages').insert([
-    {
-      conversation_id: conversation.id,
+  const { data: userRowData, error: userMsgError } = await supabase
+    .from('messages')
+    .insert({
+      conversation_id: conversationId,
       sender: 'user',
       content: displayText,
       attachment_path: attachment?.path ?? null,
       attachment_name: attachment?.name ?? null,
-    },
-    { conversation_id: conversation.id, sender: 'assistant', content: PLACEHOLDER_ANSWER },
-  ]);
-  if (msgError) throw msgError;
+    })
+    .select('id, sender, content, created_at, attachment_path, attachment_name')
+    .single<RawMessageRow>();
+  if (userMsgError) throw userMsgError;
+
+  let answer = FALLBACK_ANSWER;
+  try {
+    const { data, error } = await supabase.functions.invoke<{ answer: string; error?: string }>('ai-tutor-chat', {
+      body: { conversationId, question: displayText, attachmentPath: attachment?.path, attachmentName: attachment?.name },
+    });
+    if (error) throw error;
+    if (data?.answer) answer = data.answer;
+  } catch (err) {
+    console.error('ai-tutor-chat failed:', err);
+  }
+
+  const { data: assistantRowData, error: assistantMsgError } = await supabase
+    .from('messages')
+    .insert({ conversation_id: conversationId, sender: 'assistant', content: answer })
+    .select('id, sender, content, created_at, attachment_path, attachment_name')
+    .single<RawMessageRow>();
+  if (assistantMsgError) throw assistantMsgError;
+
+  const signedUrlByPath = new Map<string, string>();
+  if (attachment) signedUrlByPath.set(attachment.path, attachment.signedUrl ?? '');
 
   return {
-    id: conversation.id,
-    question: displayText,
-    answer: PLACEHOLDER_ANSWER,
-    createdAt: conversation.created_at,
-    attachment,
+    conversationId,
+    userMessage: toTutorMessage(userRowData, signedUrlByPath),
+    assistantMessage: toTutorMessage(assistantRowData, signedUrlByPath),
   };
 }
 
 /** How many questions this user asked today, for the "You asked N questions today" insight. */
-export function countQuestionsToday(conversations: TutorConversation[]): number {
+export function countQuestionsToday(sessions: TutorSession[]): number {
   const todayKey = new Date().toDateString();
-  return conversations.filter((c) => new Date(c.createdAt).toDateString() === todayKey).length;
+  return sessions
+    .flatMap((s) => s.messages)
+    .filter((m) => m.sender === 'user' && new Date(m.createdAt).toDateString() === todayKey).length;
 }
