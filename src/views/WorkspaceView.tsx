@@ -21,7 +21,6 @@ import FloatingAIButton from '../components/workspace/FloatingAIButton';
 import LessonContent from '../components/workspace/LessonContent';
 import SubjectSelection from '../components/workspace/SubjectSelection';
 import SubjectSidebar from '../components/workspace/SubjectSidebar';
-import SubjectTools from '../components/workspace/SubjectTools';
 import WorkspaceHeader from '../components/workspace/WorkspaceHeader';
 
 export default function WorkspaceView() {
@@ -34,7 +33,6 @@ export default function WorkspaceView() {
   const [activeLesson, setActiveLesson] = useState<WorkspaceLesson | undefined>(undefined);
   const [activeTopic, setActiveTopic] = useState<WorkspaceTopic | undefined>(undefined);
   const [query, setQuery] = useState('');
-  const [activeTool, setActiveTool] = useState('');
   const [aiOpen, setAiOpen] = useState(false);
   const [progressBump, setProgressBump] = useState(0);
   const [resolvedTopicId, setResolvedTopicId] = useState<string | null>(null);
@@ -54,7 +52,6 @@ export default function WorkspaceView() {
     const lesson = getDefaultLesson(subject);
     setActiveLesson(lesson);
     setActiveTopic(getDefaultTopic(subject));
-    setActiveTool(subject.tools[0] ?? 'Workspace tool');
     setActiveMode(subjectId ? 'lesson' : 'overview');
   }, [subject, subjectId]);
 
@@ -176,7 +173,6 @@ export default function WorkspaceView() {
         />
 
         <main className="flex-1 min-w-0 overflow-y-auto space-y-4 pr-1">
-          <SubjectTools subject={subject} activeTool={activeTool} onToolChange={setActiveTool} />
           <LessonContent
             subject={subject}
             activeMode={activeMode}
