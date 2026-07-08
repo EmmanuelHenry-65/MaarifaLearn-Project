@@ -6,7 +6,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import AppLayout from "./AppLayout";
 
 import { ThemeProvider } from "./context/ThemeContext";
-import { AuthProvider, useAuth } from "./context/AuthContext";
+import { AuthProvider } from "./context/AuthContext";
 import { AchievementCelebrationProvider } from "./context/AchievementCelebrationContext";
 
 import ProtectedRoute from "./components/auth/ProtectedRoute";
@@ -24,20 +24,6 @@ import SettingsPage from "./pages/SettingsPage";
 import WorkspacePage from "./pages/WorkspacePage";
 import ExamsPage from "./pages/ExamsPage";
 
-function HomeGate() {
-  const { user, loading } = useAuth();
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-[#0a0e1a] text-cyan-400 text-lg">
-        Loading...
-      </div>
-    );
-  }
-
-  return user ? <Navigate to="/dashboard" replace /> : <LandingPage />;
-}
-
 export default function App() {
   return (
     <ThemeProvider>
@@ -46,7 +32,7 @@ export default function App() {
           <BrowserRouter>
             <Routes>
               {/* Public Routes */}
-              <Route path="/" element={<HomeGate />} />
+              <Route path="/" element={<LandingPage />} />
               <Route path="/login" element={<LoginPage />} />
               <Route path="/signup" element={<SignupPage />} />
               <Route path="/forgot-password" element={<ForgotPasswordPage />} />
