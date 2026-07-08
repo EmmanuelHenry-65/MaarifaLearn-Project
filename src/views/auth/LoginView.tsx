@@ -44,7 +44,7 @@ export default function LoginView() {
       }
 
       if (data.user) {
-        navigate("/");
+        navigate("/dashboard");
       }
     } catch (err) {
       console.error(err);
