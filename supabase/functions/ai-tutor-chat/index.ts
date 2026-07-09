@@ -290,7 +290,7 @@ Deno.serve(async (req) => {
       error: userError,
     } = await userClient.auth.getUser();
     if (userError || !user) {
-      return new Response(JSON.stringify({ error: 'Not authenticated' }), { status: 401, headers: CORS_HEADERS });
+      return new Response(JSON.stringify({ error: 'Not authenticated' }), { status: 401, headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' } });
     }
 
     // Service-role client -- writes to knowledge_documents and reads the learner's

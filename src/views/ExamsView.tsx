@@ -71,6 +71,8 @@ export default function ExamsView() {
   const [notice, setNotice] = useState('');
 
   const appliedDeepLink = useRef(false);
+  const startingRef = useRef(false);
+  const submittingRef = useRef(false);
 
   // Deep-link support: /exams?subject=<id>&paper=<id> (used by Past Papers' "Start Practice" etc).
   useEffect(() => {
@@ -107,6 +109,9 @@ export default function ExamsView() {
   useEffect(() => {
     if (screen !== 'attempt' || !attemptId) return;
     const timer = setTimeout(() => {
+      // Skip if a submit is in flight -- the RPC would no-op anyway once the
+      // attempt leaves 'in_progress', so don't waste the round-trip.
+      if (submittingRef.current) return;
       saveAttemptDraft(attemptId, answers).catch(() => {
         // Best-effort -- the next autosave (or final submit) will retry.
       });
@@ -173,17 +178,21 @@ export default function ExamsView() {
   };
 
   const startExam = async (paper: ExamPaper, mode: ExamMode) => {
-    if (!user) return;
+    // startingRef guards against a double-click firing two concurrent
+    // startAttempt calls (the DB now also enforces one in-progress attempt
+    // per paper, but there's no reason to race it from here at all).
+    if (!user || startingRef.current) return;
+    startingRef.current = true;
     try {
-      const [id, questions] = await Promise.all([
+      const [attempt, questions] = await Promise.all([
         startAttempt(user.id, paper.id),
         activePaper?.id === paper.id && activeQuestions.length ? Promise.resolve(activeQuestions) : getPaperQuestions(paper.id),
       ]);
       // startAttempt resumes an existing in_progress attempt if one exists,
       // so re-fetch any previously autosaved draft answers -- this is a
       // no-op (empty array) for a genuinely new attempt.
-      const draft = await getAttemptAnswers(id).catch(() => []);
-      setAttemptId(id);
+      const draft = await getAttemptAnswers(attempt.id).catch(() => []);
+      setAttemptId(attempt.id);
       setActiveQuestions(questions);
       setActivePaper(paper);
       setExamMode(mode);
@@ -192,11 +201,15 @@ export default function ExamsView() {
       setQuestionBookmarks({});
       setAttemptResult(null);
       setGradedAnswers([]);
-      setAttemptStartedAt(Date.now());
+      // Keep the attempt's ORIGINAL start time -- resuming after a reload
+      // must not hand the student a fresh timer.
+      setAttemptStartedAt(new Date(attempt.startedAt).getTime());
       setScreen('attempt');
       setNotice(mode === 'authentic' ? 'Authentic exam mode started. AI guidance disabled.' : 'AI guided mode started. Socratic tutor is available.');
     } catch {
       setNotice('Could not start the exam — please try again.');
+    } finally {
+      startingRef.current = false;
     }
   };
 
@@ -219,7 +232,11 @@ export default function ExamsView() {
   };
 
   const submitExam = async () => {
-    if (!attemptId) return;
+    // submittingRef guards re-entry: a double-click on Submit, or the timer
+    // hitting 0 while a submit is already in flight, must not fire a second
+    // submit_exam_attempt RPC (and a second grading pass) for the attempt.
+    if (!attemptId || submittingRef.current) return;
+    submittingRef.current = true;
     try {
       const result = await submitAttempt(attemptId, answers);
       setAttemptResult(result);
@@ -236,6 +253,8 @@ export default function ExamsView() {
       if (hasUngraded) await runGrading(attemptId);
     } catch {
       setNotice('Could not submit the exam — please try again.');
+    } finally {
+      submittingRef.current = false;
     }
   };
 
@@ -388,6 +407,7 @@ export default function ExamsView() {
           paper={activePaper}
           questions={activeQuestions}
           mode={examMode}
+          startedAt={attemptStartedAt ?? Date.now()}
           answers={answers}
           flags={flags}
           bookmarks={questionBookmarks}

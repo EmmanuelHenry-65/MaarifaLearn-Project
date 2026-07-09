@@ -335,13 +335,16 @@ export async function notifyDueTasksToday(userId: string): Promise<void> {
 
   for (const task of dueToday) {
     const title = `Study reminder: ${task.title}`;
+    // limit(1) rather than maybeSingle(): maybeSingle throws if duplicates
+    // ever exist, which would silently skip the dedup check here and append
+    // yet another duplicate on every page load.
     const { data: existing } = await supabase
       .from('notifications')
       .select('id')
       .eq('profile_id', userId)
       .eq('title', title)
-      .maybeSingle();
-    if (existing) continue;
+      .limit(1);
+    if (existing && existing.length > 0) continue;
 
     await createNotification(
       userId,

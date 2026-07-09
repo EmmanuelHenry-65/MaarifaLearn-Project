@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Navigate, useParams } from 'react-router-dom';
 import { getDefaultLesson, getDefaultTopic, getWorkspaceSubject } from '../data/workspaceData';
 import type { WorkspaceLesson, WorkspaceMode, WorkspaceTopic } from '../data/workspaceData';
@@ -42,6 +42,14 @@ export default function WorkspaceView() {
   const [progressLoading, setProgressLoading] = useState(false);
   const [progressRefreshTick, setProgressRefreshTick] = useState(0);
   const [topicProgress, setTopicProgress] = useState<TopicProgressBySlug>({});
+  const mountedRef = useRef(true);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
 
   useEffect(() => {
     localStorage.setItem('workspace-sidebar-collapsed', String(collapsed));
@@ -192,6 +200,9 @@ export default function WorkspaceView() {
                 recordTopicProgress(user.id, resolvedTopicId, 15)
                   .then(() => checkForNewAchievements(user.id))
                   .then((newlyEarned) => {
+                    // Don't set state or pop a celebration modal if the user
+                    // already navigated away before the write resolved.
+                    if (!mountedRef.current) return;
                     celebrate(newlyEarned);
                     setProgressRefreshTick((v) => v + 1);
                   })

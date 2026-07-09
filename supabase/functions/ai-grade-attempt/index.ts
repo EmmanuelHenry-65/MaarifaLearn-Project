@@ -60,7 +60,7 @@ Deno.serve(async (req) => {
       error: userError,
     } = await userClient.auth.getUser();
     if (userError || !user) {
-      return new Response(JSON.stringify({ error: 'Not authenticated' }), { status: 401, headers: CORS_HEADERS });
+      return new Response(JSON.stringify({ error: 'Not authenticated' }), { status: 401, headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' } });
     }
 
     // RLS on exam_attempts scopes this to profile_id = auth.uid(), so an
@@ -71,16 +71,19 @@ Deno.serve(async (req) => {
       .eq('id', attemptId)
       .maybeSingle<{ id: string; paper_id: string }>();
     if (attemptError || !attempt) {
-      return new Response(JSON.stringify({ error: 'Attempt not found or not yours' }), { status: 404, headers: CORS_HEADERS });
+      return new Response(JSON.stringify({ error: 'Attempt not found or not yours' }), { status: 404, headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' } });
     }
 
     const adminClient = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
 
+    // paper_id filter: only this paper's own questions are ever graded, even
+    // if foreign question rows somehow exist on the attempt.
     const { data: ungraded, error: ungradedError } = await adminClient
       .from('student_answers')
       .select('question_id, answer, questions!inner(question_text, question_type, marking_scheme, marks)')
       .eq('attempt_id', attemptId)
       .is('is_correct', null)
+      .eq('questions.paper_id', attempt.paper_id)
       .in('questions.question_type', ['short_answer', 'essay']);
     if (ungradedError) throw new Error(`Failed to read student_answers (check service_role grants): ${ungradedError.message}`);
 
@@ -115,12 +118,19 @@ Deno.serve(async (req) => {
       const chatJson = await chatRes.json();
       const raw = chatJson.choices[0].message.content as string;
 
-      let results: { questionId: string; marksAwarded: number; feedback: string }[] = [];
+      // Models sometimes wrap JSON in markdown fences despite instructions.
+      const unfenced = raw.trim().replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/, '');
+
+      let results: { questionId: string; marksAwarded: number; feedback: string }[];
       try {
-        results = JSON.parse(raw);
+        results = JSON.parse(unfenced);
+        if (!Array.isArray(results)) throw new Error('not an array');
       } catch {
-        // Best-effort -- if parsing fails, leave these rows ungraded rather than guess.
-        results = [];
+        // Throwing (instead of silently grading nothing) leaves the attempt at
+        // 'submitted', so the frontend's Retry Grading actually has something
+        // to retry -- previously this fell through and stamped the attempt
+        // 'graded' with the essay questions still pending forever.
+        throw new Error('AI grading response could not be parsed -- attempt left ungraded for retry.');
       }
 
       const byId = new Map(rows.map((r) => [r.question_id, r.questions.marks]));
@@ -138,11 +148,15 @@ Deno.serve(async (req) => {
     }
 
     // Recompute the final score across every question (auto-graded MCQ/true-false
-    // already in student_answers, plus whatever was just AI-graded above).
+    // already in student_answers, plus whatever was just AI-graded above). The
+    // inner join on paper_id keeps the earned sum scoped to this paper's own
+    // questions -- same denominator as totalMarks below, so percentage can
+    // never exceed 100 even if foreign answer rows exist on the attempt.
     const { data: allAnswers, error: allAnswersError } = await adminClient
       .from('student_answers')
-      .select('marks_awarded')
-      .eq('attempt_id', attemptId);
+      .select('marks_awarded, questions!inner(paper_id)')
+      .eq('attempt_id', attemptId)
+      .eq('questions.paper_id', attempt.paper_id);
     if (allAnswersError) throw new Error(`Failed to recompute score: ${allAnswersError.message}`);
 
     const { data: allQuestions, error: allQuestionsError } = await adminClient

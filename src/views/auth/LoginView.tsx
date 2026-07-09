@@ -22,6 +22,7 @@ export default function LoginView() {
   // UI State
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [googleNote, setGoogleNote] = useState(false);
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
@@ -81,15 +82,10 @@ export default function LoginView() {
           onChange={(e) => setPassword(e.target.value)}
         />
 
-        <div className="flex items-center justify-between text-xs">
-          <label className="flex items-center gap-2 text-gray-400 cursor-pointer">
-            <input
-              type="checkbox"
-              className="rounded bg-[rgba(17,24,50,0.6)] border-[rgba(56,78,135,0.3)]"
-            />
-            Remember me
-          </label>
-
+        {/* Sessions persist by default (Supabase stores them in localStorage),
+            so a "Remember me" checkbox here would be decorative — omitted
+            rather than shown as a control that does nothing. */}
+        <div className="flex items-center justify-end text-xs">
           <Link
             to="/forgot-password"
             className="text-cyan-400 hover:text-cyan-300 font-semibold"
@@ -116,7 +112,9 @@ export default function LoginView() {
           </div>
         </div>
 
-        <AuthButton variant="secondary" type="button">
+        {/* Google OAuth is on hold (mentor decision) until the provider is
+            configured in Supabase — shown honestly instead of as a dead button. */}
+        <AuthButton variant="secondary" type="button" onClick={() => setGoogleNote(true)}>
           <svg className="w-5 h-5" viewBox="0 0 24 24">
             <path
               fill="currentColor"
@@ -137,6 +135,9 @@ export default function LoginView() {
           </svg>
           Continue with Google
         </AuthButton>
+        {googleNote && (
+          <p className="text-xs text-center text-gray-500">Google sign-in is coming soon — please use your email and password for now.</p>
+        )}
       </form>
 
       <p className={`text-center text-sm ${mutedColor}`}>

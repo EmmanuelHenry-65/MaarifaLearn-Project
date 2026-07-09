@@ -480,9 +480,11 @@ export default function AITutorView() {
               <div className="w-8 h-8 rounded-lg border flex items-center justify-center text-sm flex-shrink-0 bg-orange-500/15 border-orange-500/25">
                 💡
               </div>
+              {/* A generic study tip, labeled as such -- not passed off as a
+                  personalized insight (nothing here reads the user's data). */}
               <p className="text-gray-400 text-[11px] leading-relaxed">
-                <span className="text-white font-semibold">Try practicing more past papers</span> to improve your exam
-                readiness.
+                <span className="text-white font-semibold">Study tip:</span> practicing past papers under timed
+                conditions is one of the fastest ways to improve exam readiness.
               </p>
             </div>
           </div>

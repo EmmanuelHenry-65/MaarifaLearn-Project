@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import { workspaceSubjects } from '../../data/workspaceData';
@@ -8,6 +8,7 @@ import { aggregateSubjects, getMyLearningData, type SubjectSummary } from '../..
 export default function SubjectSelection() {
   const { theme } = useTheme();
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [summaries, setSummaries] = useState<SubjectSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const textColor = theme === 'light' ? 'text-slate-900' : 'text-white';
@@ -90,7 +91,17 @@ export default function SubjectSelection() {
                 <span className="flex-1 text-center px-3 py-2 rounded-lg bg-cyan-500/10 border border-cyan-500/20 text-cyan-600 text-xs font-bold group-hover:bg-cyan-500/20 transition-colors">
                   Enter Workspace
                 </span>
-                <span className="px-3 py-2 rounded-lg bg-purple-500/10 border border-purple-500/20 text-purple-600 text-xs font-bold">
+                {/* Inside the card's <Link>, so intercept the click -- "Ask AI"
+                    must actually open the AI Tutor, not silently enter the workspace. */}
+                <span
+                  role="button"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    navigate(`/ai-tutor?q=${encodeURIComponent(`Help me study ${subject.name} — what should I focus on first?`)}`);
+                  }}
+                  className="px-3 py-2 rounded-lg bg-purple-500/10 border border-purple-500/20 text-purple-600 text-xs font-bold hover:bg-purple-500/20 transition-colors"
+                >
                   Ask AI
                 </span>
               </div>

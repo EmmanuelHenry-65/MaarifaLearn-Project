@@ -1,15 +1,35 @@
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../../context/ThemeContext';
+import { supabase } from '../../lib/supabase';
 import ChangePasswordCard from './ChangePasswordCard';
 import SettingsRow from './SettingsRow';
 import ComingSoonBadge from './ComingSoonBadge';
+
+interface PrivacySecurityCardProps {
+  /** Opens the shared type-DELETE-to-confirm modal owned by SettingsView. */
+  onRequestDeleteAccount: () => void;
+}
 
 // Privacy & Security tab. Change Password is the existing, fully functional
 // ChangePasswordCard reused as-is (also still shown on the Account tab,
 // which is left untouched) — everything else here has no backing data or
 // API yet, so those controls are presented honestly as "Coming Soon"
 // rather than as fake toggles that don't actually do anything.
-export default function PrivacySecurityCard() {
+export default function PrivacySecurityCard({ onRequestDeleteAccount }: PrivacySecurityCardProps) {
   const { theme } = useTheme();
+  const navigate = useNavigate();
+  const [signingOutAll, setSigningOutAll] = useState(false);
+
+  async function handleSignOutAllDevices() {
+    setSigningOutAll(true);
+    try {
+      // scope 'global' revokes every session for this user, not just this one.
+      await supabase.auth.signOut({ scope: 'global' });
+    } finally {
+      navigate('/login');
+    }
+  }
 
   const sectionBg = theme === 'light' ? 'bg-slate-50 border-slate-200' : 'bg-[rgba(17,24,50,0.42)] border-[rgba(56,78,135,0.18)]';
   const textColor = theme === 'light' ? 'text-slate-900' : 'text-white';
@@ -89,7 +109,10 @@ export default function PrivacySecurityCard() {
               <p className={`text-sm font-semibold ${textColor}`}>Delete Account</p>
               <p className="text-gray-500 text-xs mt-0.5">Permanently delete your account and all associated data.</p>
             </div>
-            <button className="self-start sm:self-center flex-shrink-0 px-4 py-2 rounded-lg bg-red-500/10 border border-red-500/40 text-red-500 text-xs font-bold hover:bg-red-500/20 transition-colors">
+            <button
+              onClick={onRequestDeleteAccount}
+              className="self-start sm:self-center flex-shrink-0 px-4 py-2 rounded-lg bg-red-500/10 border border-red-500/40 text-red-500 text-xs font-bold hover:bg-red-500/20 transition-colors"
+            >
               Delete Account
             </button>
           </div>
@@ -98,9 +121,14 @@ export default function PrivacySecurityCard() {
             <div>
               <p className={`text-sm font-semibold ${textColor}`}>Sign Out of All Devices</p>
               <p className="text-gray-500 text-xs mt-0.5">Sign out from every device connected to your account.</p>
-              <p className="text-[11px] italic text-amber-500/80 mt-1">🛠 Needs supabase.auth.signOut({'{'} scope: 'global' {'}'}) wired to this button, then a redirect to login.</p>
             </div>
-            <ComingSoonBadge />
+            <button
+              onClick={handleSignOutAllDevices}
+              disabled={signingOutAll}
+              className="self-start sm:self-center flex-shrink-0 px-4 py-2 rounded-lg bg-red-500/10 border border-red-500/40 text-red-500 text-xs font-bold hover:bg-red-500/20 transition-colors disabled:opacity-50"
+            >
+              {signingOutAll ? 'Signing out...' : 'Sign Out Everywhere'}
+            </button>
           </div>
         </div>
       </div>
