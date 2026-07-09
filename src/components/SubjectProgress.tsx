@@ -67,7 +67,7 @@ export default function SubjectProgress({ topics }: SubjectProgressProps) {
         <h3 className={`font-bold text-lg ${titleColor}`}>My Subjects</h3>
         <button onClick={() => navigate('/subjects')} className="text-cyan-600 text-xs font-medium hover:text-cyan-700 transition-colors">View all</button>
       </div>
-      <div className="grid grid-cols-5 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
         {subjects.map((subject) => {
           const status = statusFor(subject.progress);
           const style = styleFor(subject.code);

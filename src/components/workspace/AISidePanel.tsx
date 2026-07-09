@@ -80,7 +80,7 @@ export default function AISidePanel({ open, subject, lesson, topic, userId, onCl
   };
 
   return (
-    <aside className={`fixed top-0 right-0 bottom-0 z-50 w-[380px] border-l p-5 transition-transform duration-300 ${panelBg} ${open ? 'translate-x-0' : 'translate-x-full'}`}>
+    <aside className={`fixed top-0 right-0 bottom-0 z-50 w-full sm:w-[380px] border-l p-5 transition-transform duration-300 ${panelBg} ${open ? 'translate-x-0' : 'translate-x-full'}`}>
       <div className="flex items-start justify-between mb-4">
         <div>
           <h3 className={`font-extrabold text-lg ${textColor}`}>AI Study Assistant</h3>

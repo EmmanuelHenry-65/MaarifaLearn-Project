@@ -23,15 +23,15 @@ export default function ExamDashboard({ currentSubject, recentExams, recommended
 
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         <SummaryCard label="Current Subject" value={currentSubject.name} icon={currentSubject.icon} />
         <SummaryCard label="Exam Readiness" value={`${currentSubject.readiness}%`} icon="⚡" />
         <SummaryCard label="Average Marks" value={`${averageMarks}%`} icon="📈" />
         <SummaryCard label="Recent Exams" value={String(recentExams.length)} icon="📝" />
       </div>
 
-      <div className="grid grid-cols-5 gap-4">
-        <div className="glass-card p-5 col-span-3">
+      <div className="grid grid-cols-1 sm:grid-cols-5 gap-4">
+        <div className="glass-card p-5 sm:col-span-3">
           <div className="flex items-center justify-between mb-4">
             <div>
               <h3 className={`font-bold text-base ${textColor}`}>Continue Last Exam</h3>
@@ -63,7 +63,7 @@ export default function ExamDashboard({ currentSubject, recentExams, recommended
           )}
         </div>
 
-        <div className="glass-card p-5 col-span-2">
+        <div className="glass-card p-5 sm:col-span-2">
           <h3 className={`font-bold text-base mb-3 ${textColor}`}>Recent Papers in {currentSubject.name}</h3>
           <div className="space-y-2">
             {recentExams.length === 0 && <p className={`text-xs ${mutedColor}`}>No papers yet for this subject.</p>}
@@ -88,7 +88,7 @@ export default function ExamDashboard({ currentSubject, recentExams, recommended
           <span className="text-cyan-600 text-xs font-bold">Personalized</span>
         </div>
         {recommendedPapers.length === 0 && <p className={`text-xs ${mutedColor}`}>No papers yet for this subject.</p>}
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           {recommendedPapers.map((paper) => (
             <button key={paper.id} onClick={() => onSelectRecommended(paper)} className={`text-left rounded-xl border p-3 hover:border-cyan-500/30 transition-all ${itemBg}`}>
               <p className={`font-bold text-sm ${textColor}`}>{paper.title}</p>

@@ -359,7 +359,7 @@ export default function ExamsView() {
                   This paper has no on-screen interactive questions — it's a downloadable exam only. Use "Authentic Paper Exam" below.
                 </div>
               )}
-              <div className="grid grid-cols-3 gap-4 mt-5">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-5">
                 <button
                   onClick={() => startExam(activePaper, 'authentic')}
                   disabled={activePaper.questionCount === 0}

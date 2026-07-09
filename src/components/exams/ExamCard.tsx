@@ -33,7 +33,7 @@ export default function ExamCard({ paper, bookmarked, onPreview, onStart, onBook
         </span>
       </div>
 
-      <div className="grid grid-cols-4 gap-2 mt-4">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-4">
         <Metric label="Your Score" value={paper.latestScore !== null ? `${paper.latestScore}%` : '—'} />
         <Metric label="Attempts" value={String(paper.attemptCount)} />
         <Metric label="Marks" value={String(paper.totalMarks)} />

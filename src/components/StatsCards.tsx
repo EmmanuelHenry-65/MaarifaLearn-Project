@@ -20,7 +20,7 @@ export default function StatsCards({ currentStreak, longestStreak, xp, rank }: S
   const goToAccomplishments = () => navigate('/accomplishments');
 
   return (
-    <div className="grid grid-cols-4 gap-4">
+    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
       {/* Day Streak */}
       <button onClick={goToAccomplishments} className="stat-card p-4 flex items-center gap-3 text-left">
         <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-orange-500 to-red-500 flex items-center justify-center shadow-lg shadow-orange-500/20 flex-shrink-0">

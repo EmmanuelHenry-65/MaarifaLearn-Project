@@ -78,7 +78,7 @@ export default function LessonContent({
         <div className="glass-card p-5">
           <h3 className={`font-bold text-lg ${textColor}`}>Syllabus Overview</h3>
           <p className={`mt-2 text-sm leading-relaxed ${mutedColor}`}>{subject.syllabus}</p>
-          <div className="mt-4 grid grid-cols-4 gap-3">
+          <div className="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-3">
             <Metric
               title="Topics"
               value={progressLoading ? '…' : progressSummary ? `${progressSummary.topicsCompleted}/${progressSummary.totalTopics}` : '0/0'}
@@ -88,7 +88,7 @@ export default function LessonContent({
             <Metric title="Last Studied" value={progressLoading ? '…' : formatRelative(progressSummary?.lastAccessedAt ?? null)} />
           </div>
         </div>
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <ListPanel title="Competencies" items={subject.competencies} />
           <ListPanel title="Learning Objectives" items={subject.objectives} />
         </div>
@@ -121,7 +121,7 @@ export default function LessonContent({
               Mark Progress
             </button>
           </div>
-          <div className="mt-5 grid grid-cols-3 gap-3">
+          <div className="mt-5 grid grid-cols-1 sm:grid-cols-3 gap-3">
             {currentLesson.topics.map((topic) => {
               const mastery = topicProgress[topic.id]?.masteryScore ?? 0;
               return (
@@ -581,7 +581,7 @@ function ResourcePanel({
       ) : items.length === 0 ? (
         <p className={`text-sm ${mutedColor}`}>No {mode === 'videos' ? 'videos' : 'resources'} uploaded for {subject.name} yet.</p>
       ) : (
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           {items.map((item) => {
             const isVideo = item.resourceType === 'video';
             const cardClasses = `text-left rounded-xl border p-4 block w-full ${panelBg} hover:border-cyan-500/30 transition-all ${item.url ? '' : 'pointer-events-none opacity-50'}`;

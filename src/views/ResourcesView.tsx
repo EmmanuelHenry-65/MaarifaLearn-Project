@@ -154,9 +154,9 @@ export default function ResourcesView() {
   ];
 
   return (
-    <div className="flex gap-6 mt-2 flex-1 min-h-0">
+    <div className="flex flex-col lg:flex-row gap-6 mt-2 flex-1 min-h-0 overflow-y-auto lg:overflow-visible">
       {/* Main Content */}
-      <div className="flex-1 min-w-0 space-y-4 overflow-y-auto pr-1">
+      <div className="flex-1 min-w-0 space-y-4 lg:overflow-y-auto pr-1">
 
         {/* Search Bar */}
         <div className="glass-card p-1 flex items-center">
@@ -190,7 +190,7 @@ export default function ResourcesView() {
         </div>
 
         {/* Stats Row */}
-        <div className="grid grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           {statCards.map((stat, i) => (
             <div key={i} className="glass-card p-4 flex items-center gap-4">
               <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-lg flex-shrink-0 border ${stat.color}`}>
@@ -216,7 +216,7 @@ export default function ResourcesView() {
           {topSubjects.length === 0 ? (
             <p className="text-gray-500 text-xs">{loading ? 'Loading subjects…' : 'No subjects available yet.'}</p>
           ) : (
-            <div className="grid grid-cols-6 gap-3">
+            <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-3">
               {topSubjects.map((sub, i) => {
                 const style = getSubjectStyle(sub.name, i);
                 const slug = getSubjectSlug(sub.name);
@@ -269,7 +269,7 @@ export default function ResourcesView() {
           ) : filteredFeatured.length === 0 ? (
             <p className="text-gray-500 text-xs">No resources match your filters yet.</p>
           ) : (
-            <div className="grid grid-cols-5 gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
               {filteredFeatured.map((res) => (
                 <ResourceCard
                   key={res.id}
@@ -286,7 +286,7 @@ export default function ResourcesView() {
       </div>
 
       {/* Right Sidebar */}
-      <div className="w-[300px] flex-shrink-0 space-y-4 overflow-y-auto pb-6">
+      <div className="w-full lg:w-[300px] flex-shrink-0 space-y-4 lg:overflow-y-auto pb-6">
 
         {/* Find Resources Quickly */}
         <div className="glass-card p-5">

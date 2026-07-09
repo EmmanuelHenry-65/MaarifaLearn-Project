@@ -62,7 +62,7 @@ export default function SubjectSidebar({
     .filter((unit) => !normalizedQuery || unit.title.toLowerCase().includes(normalizedQuery) || unit.lessons.length > 0);
 
   return (
-    <aside className={`glass-card transition-all duration-300 overflow-hidden flex-shrink-0 ${collapsed ? 'w-[72px]' : 'w-[280px]'}`}>
+    <aside className={`glass-card transition-all duration-300 overflow-hidden flex-shrink-0 w-full ${collapsed ? 'sm:w-[72px]' : 'sm:w-[280px]'}`}>
       <div className="p-3 border-b border-[rgba(56,78,135,0.15)] flex items-center justify-between">
         {!collapsed && <p className={`font-bold text-sm ${textColor}`}>Workspace Menu</p>}
         <button onClick={onToggleCollapsed} className="w-9 h-9 rounded-lg bg-cyan-500/10 border border-cyan-500/20 text-cyan-600 flex items-center justify-center hover:bg-cyan-500/20 transition-colors">

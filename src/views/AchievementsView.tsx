@@ -150,12 +150,12 @@ export default function AchievementsView() {
   }
 
   return (
-    <div className="flex gap-6 mt-2 flex-1 min-h-0">
+    <div className="flex flex-col lg:flex-row gap-6 mt-2 flex-1 min-h-0 overflow-y-auto lg:overflow-visible">
       {/* Main Content */}
-      <div className="flex-1 min-w-0 space-y-4 overflow-y-auto pr-1">
+      <div className="flex-1 min-w-0 space-y-4 lg:overflow-y-auto pr-1">
 
         {/* Top Stats */}
-        <div className="grid grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           {topStats.map((stat, i) => (
             <div key={i} className="glass-card p-4 flex items-center gap-4">
               <div className={`w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0 border ${stat.iconBg}`}>
@@ -178,7 +178,7 @@ export default function AchievementsView() {
               <p className="text-gray-500 text-xs">Earn badges by completing topics and achieving milestones.</p>
             </div>
           </div>
-          <div className="grid grid-cols-6 gap-3">
+          <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-3">
             {badges.map(({ def, isEarned, earnedAt, percent, label }) => (
               <div key={def.key} className="bg-[rgba(17,24,50,0.6)] border border-[rgba(56,78,135,0.2)] rounded-xl p-4 text-center flex flex-col items-center hover:border-cyan-500/30 transition-all group">
                 {isEarned && def.image ? (
@@ -213,7 +213,7 @@ export default function AchievementsView() {
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-white font-bold text-base">Milestones</h3>
           </div>
-          <div className="grid grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             {milestones.map(({ def, current, total, percent }) => (
               <div key={def.key} className="bg-[rgba(17,24,50,0.5)] border border-[rgba(56,78,135,0.15)] rounded-xl p-4 hover:border-cyan-500/20 transition-all">
                 <div className="flex items-center gap-3 mb-3">
@@ -237,7 +237,7 @@ export default function AchievementsView() {
       </div>
 
       {/* Right Sidebar */}
-      <div className="w-[300px] flex-shrink-0 space-y-4 overflow-y-auto pb-6">
+      <div className="w-full lg:w-[300px] flex-shrink-0 space-y-4 lg:overflow-y-auto pb-6">
 
         {/* Recent Achievements */}
         <div className="glass-card p-5">

@@ -123,13 +123,13 @@ export default function SubjectsView() {
   }
 
   return (
-    <div className="flex gap-6 mt-2 flex-1 min-h-0">
+    <div className="flex flex-col lg:flex-row gap-6 mt-2 flex-1 min-h-0 overflow-y-auto lg:overflow-visible">
       {/* Left/Center Column */}
-      <div className="flex-1 min-w-0 space-y-4 overflow-y-auto pr-1">
+      <div className="flex-1 min-w-0 space-y-4 lg:overflow-y-auto pr-1">
 
         {/* Navigation & Search Area */}
-        <div className="flex items-center justify-between gap-4">
-          <div className="flex items-center gap-4 border-b border-[rgba(56,78,135,0.15)] pb-1 flex-1">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
+          <div className="flex items-center gap-4 border-b border-[rgba(56,78,135,0.15)] pb-1 flex-1 overflow-x-auto scrollbar-hide">
             {(['All Subjects', 'Core Subjects', 'Optional Subjects'] as const).map((tab) => (
               <button
                 key={tab}
@@ -146,13 +146,13 @@ export default function SubjectsView() {
           </div>
 
           <div className="flex items-center gap-2">
-            <div className="relative">
+            <div className="relative flex-1 sm:flex-none">
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search subjects..."
-                className="w-44 px-3 py-1.5 rounded-lg bg-[rgba(17,24,50,0.8)] border border-[rgba(56,78,135,0.3)] text-gray-300 text-xs placeholder-gray-600 focus:outline-none focus:border-cyan-500/40"
+                className="w-full sm:w-44 px-3 py-1.5 rounded-lg bg-[rgba(17,24,50,0.8)] border border-[rgba(56,78,135,0.3)] text-gray-300 text-xs placeholder-gray-600 focus:outline-none focus:border-cyan-500/40"
               />
             </div>
             <button
@@ -183,7 +183,7 @@ export default function SubjectsView() {
         </div>
 
         {/* Subjects Grid/List */}
-        <div className={viewMode === 'grid' ? 'grid grid-cols-4 gap-3' : 'space-y-2.5'}>
+        <div className={viewMode === 'grid' ? 'grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3' : 'space-y-2.5'}>
           {filteredSubjects.map((sub) => (
             <div
               key={sub.code}
@@ -262,7 +262,7 @@ export default function SubjectsView() {
               {visibleRecent.map((topic) => {
                 const style = styleFor(topic.subjectCode);
                 return (
-                  <div key={topic.topicId} className={`flex items-center justify-between p-3 rounded-xl border hover:border-cyan-500/30 transition-all ${rowBg}`}>
+                  <div key={topic.topicId} className={`flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-3 rounded-xl border hover:border-cyan-500/30 transition-all ${rowBg}`}>
                     <div className="flex items-center gap-3">
                       <div className={`w-8 h-8 rounded-lg border flex items-center justify-center text-sm font-semibold ${style.iconColor}`}>
                         {style.icon}
@@ -273,8 +273,8 @@ export default function SubjectsView() {
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-6">
-                      <div className="flex items-center gap-2 w-44">
+                    <div className="flex items-center gap-3 sm:gap-6 flex-wrap">
+                      <div className="flex items-center gap-2 w-24 sm:w-44">
                         <div className={`flex-1 h-1.5 rounded-full overflow-hidden ${theme === 'light' ? 'bg-slate-200' : 'bg-[rgba(56,78,135,0.2)]'}`}>
                           <div className={`h-full rounded-full ${style.barColor}`} style={{ width: `${topic.masteryScore}%` }} />
                         </div>
@@ -301,7 +301,7 @@ export default function SubjectsView() {
       </div>
 
       {/* Right Column */}
-      <div className="w-[300px] flex-shrink-0 space-y-4 overflow-y-auto pb-6">
+      <div className="w-full lg:w-[300px] flex-shrink-0 space-y-4 lg:overflow-y-auto pb-6">
         {/* Overall Progress */}
         <div className="glass-card p-5">
           <h3 className="text-white font-bold text-base mb-4">Overall Progress</h3>

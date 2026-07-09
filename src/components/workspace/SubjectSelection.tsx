@@ -55,7 +55,7 @@ export default function SubjectSelection() {
         </div>
       </div>
 
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
         {workspaceSubjects.map((subject) => {
           const summary = summaryByCode.get(subject.id);
           const completed = summary?.completedCount ?? 0;

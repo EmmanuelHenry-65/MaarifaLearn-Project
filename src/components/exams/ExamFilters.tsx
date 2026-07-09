@@ -40,7 +40,7 @@ export default function ExamFilters({ filters, papers, onChange }: ExamFiltersPr
           Reset filters
         </button>
       </div>
-      <div className="grid grid-cols-4 gap-2">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
         <input value={filters.query} onChange={(event) => update('query', event.target.value)} placeholder="Search exam papers..." className={`${controlClass} col-span-2`} />
         <select value={filters.year} onChange={(event) => update('year', event.target.value)} className={controlClass}><option>All</option>{years.map((year) => <option key={year}>{year}</option>)}</select>
         <select value={filters.term} onChange={(event) => update('term', event.target.value)} className={controlClass}><option>All</option><option>Term 1</option><option>Term 2</option><option>Term 3</option></select>

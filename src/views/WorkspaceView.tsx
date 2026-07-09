@@ -164,7 +164,7 @@ export default function WorkspaceView() {
     <div className="flex flex-col gap-4 flex-1 min-h-0">
       <WorkspaceHeader subject={subject} activeMode={activeMode} query={query} onQueryChange={setQuery} progressSummary={progressSummary} progressLoading={progressLoading} />
 
-      <div className="flex gap-4 flex-1 min-h-0">
+      <div className="flex flex-col sm:flex-row gap-4 flex-1 min-h-0 overflow-y-auto sm:overflow-visible">
         <SubjectSidebar
           subject={subject}
           collapsed={collapsed}

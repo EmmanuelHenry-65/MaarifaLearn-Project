@@ -428,8 +428,8 @@ export default function AITutorView() {
         )}
       </div>
 
-      {/* Right Column */}
-      <div className="w-[300px] flex-shrink-0 space-y-4 overflow-y-auto pb-6">
+      {/* Right Column — hidden below lg; the chat itself is the primary experience on mobile/tablet */}
+      <div className="hidden lg:block w-[300px] flex-shrink-0 space-y-4 overflow-y-auto pb-6">
 
         {/* Recent Conversations */}
         <div className="glass-card p-5">

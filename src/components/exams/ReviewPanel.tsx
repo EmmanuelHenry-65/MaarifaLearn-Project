@@ -34,8 +34,8 @@ export default function ReviewPanel({ paper, questions, answers, gradedAnswers, 
   }
 
   return (
-    <div className="flex gap-4 flex-1 min-h-0">
-      <aside className="w-[230px] flex-shrink-0 glass-card p-4">
+    <div className="flex flex-col sm:flex-row gap-4 flex-1 min-h-0 overflow-y-auto sm:overflow-visible">
+      <aside className="w-full sm:w-[230px] flex-shrink-0 glass-card p-4">
         <h3 className={`font-bold text-base mb-3 ${textColor}`}>Smart Review</h3>
         <div className="space-y-2">
           {questions.map((item, index) => (

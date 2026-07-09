@@ -66,8 +66,8 @@ export default function ExamInterface({ paper, questions, mode, startedAt, answe
   const tools = useMemo(() => getToolsForPaper(paper.subjectCode), [paper.subjectCode]);
 
   return (
-    <div className="flex gap-4 flex-1 min-h-0">
-      <aside className="w-[230px] flex-shrink-0 space-y-4">
+    <div className="flex flex-col sm:flex-row gap-4 flex-1 min-h-0 overflow-y-auto sm:overflow-visible">
+      <aside className="w-full sm:w-[230px] flex-shrink-0 space-y-4">
         <div className="glass-card p-4">
           <p className={`font-bold text-sm ${textColor}`}>Timer</p>
           <div className={`mt-3 text-3xl font-extrabold ${urgent ? 'text-red-500' : 'text-cyan-600'}`}>{minutes}:{seconds}</div>

@@ -92,31 +92,31 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="flex gap-6 mt-2 flex-1 min-h-0">
+    <div className="flex flex-col lg:flex-row gap-6 mt-2 flex-1 min-h-0 overflow-y-auto lg:overflow-visible">
       {/* Left/Center Column */}
-      <div className="flex-1 min-w-0 space-y-4 overflow-y-auto pr-1">
+      <div className="flex-1 min-w-0 space-y-4 lg:overflow-y-auto pr-1">
         <StatsCards currentStreak={streak.currentStreak} longestStreak={longestStreak} xp={xp} rank={rank} />
-        <div className="grid grid-cols-5 gap-4">
-          <div className="col-span-3">
+        <div className="grid grid-cols-1 sm:grid-cols-5 gap-4">
+          <div className="sm:col-span-3">
             <ContinueLearning topics={topics} />
           </div>
-          <div className="col-span-2">
+          <div className="sm:col-span-2">
             <TodaysMission topics={topics} askedAiToday={askedAiToday} />
           </div>
         </div>
         <SubjectProgress topics={topics} />
-        <div className="grid grid-cols-5 gap-4 pb-6">
-          <div className="col-span-2">
+        <div className="grid grid-cols-1 sm:grid-cols-5 gap-4 pb-6">
+          <div className="sm:col-span-2">
             <StudyPlanner tasks={todayTasks} />
           </div>
-          <div className="col-span-3">
+          <div className="sm:col-span-3">
             <LearningJourney topics={topics} />
           </div>
         </div>
       </div>
 
       {/* Right Column */}
-      <div className="w-[300px] flex-shrink-0 space-y-4 overflow-y-auto pb-6">
+      <div className="w-full lg:w-[300px] flex-shrink-0 space-y-4 lg:overflow-y-auto pb-6">
         <AITutor topics={topics} />
         <UpcomingQuiz topics={topics} />
         <RecentAchievements achievements={achievements} />

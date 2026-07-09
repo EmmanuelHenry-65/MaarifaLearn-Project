@@ -94,20 +94,24 @@ export default function SubjectDetailPage() {
       </Link>
 
       <div className="glass-card p-6">
-        <div className="flex items-center gap-4">
-          <div className={`w-16 h-16 rounded-2xl border flex items-center justify-center text-3xl ${style.iconColor}`}>
-            {style.icon}
+        <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+          <div className="flex items-center gap-4 flex-1 min-w-0">
+            <div className={`w-16 h-16 rounded-2xl border flex items-center justify-center text-3xl flex-shrink-0 ${style.iconColor}`}>
+              {style.icon}
+            </div>
+            <div className="flex-1 min-w-0">
+              <h2 className="text-white font-extrabold text-2xl capitalize">{subjectName}</h2>
+              <p className="text-gray-400 text-sm mt-1">{completedCount} of {totalCount} topics completed</p>
+            </div>
           </div>
-          <div className="flex-1">
-            <h2 className="text-white font-extrabold text-2xl capitalize">{subjectName}</h2>
-            <p className="text-gray-400 text-sm mt-1">{completedCount} of {totalCount} topics completed</p>
+          <div className="flex items-center gap-2 flex-wrap">
+            <button onClick={() => navigate(`/workspace/${subjectId}`)} className="px-4 py-2 rounded-lg bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 text-sm font-bold hover:bg-cyan-500/20">
+              Open Workspace
+            </button>
+            <button onClick={() => navigate('/ai-tutor')} className="px-4 py-2 rounded-lg bg-purple-500/10 border border-purple-500/30 text-purple-400 text-sm font-bold hover:bg-purple-500/20">
+              Ask AI Tutor
+            </button>
           </div>
-          <button onClick={() => navigate(`/workspace/${subjectId}`)} className="px-4 py-2 rounded-lg bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 text-sm font-bold hover:bg-cyan-500/20">
-            Open Workspace
-          </button>
-          <button onClick={() => navigate('/ai-tutor')} className="px-4 py-2 rounded-lg bg-purple-500/10 border border-purple-500/30 text-purple-400 text-sm font-bold hover:bg-purple-500/20">
-            Ask AI Tutor
-          </button>
         </div>
         <div className="mt-5">
           <div className="flex justify-between text-sm mb-1.5">
@@ -120,7 +124,7 @@ export default function SubjectDetailPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div className="glass-card p-5">
           <h3 className="text-white font-bold text-base mb-3">Topics Completed</h3>
           <p className="text-3xl font-extrabold text-cyan-400">{completedCount}</p>

@@ -166,9 +166,9 @@ export default function MyLearningView() {
   }
 
   return (
-    <div className="flex gap-6 mt-2 flex-1 min-h-0">
+    <div className="flex flex-col lg:flex-row gap-6 mt-2 flex-1 min-h-0 overflow-y-auto lg:overflow-visible">
       {/* Left/Center Column */}
-      <div className="flex-1 min-w-0 space-y-4 overflow-y-auto pr-1">
+      <div className="flex-1 min-w-0 space-y-4 lg:overflow-y-auto pr-1">
 
         {/* Continue Learning Row */}
         <div className="glass-card p-5">
@@ -181,7 +181,7 @@ export default function MyLearningView() {
               You haven't started a lesson yet. Browse subjects to get going.
             </button>
           ) : (
-            <div className="grid grid-cols-4 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
               {continueLearning.map((topic) => {
                 const style = styleFor(topic.subjectCode);
                 return (
@@ -255,7 +255,7 @@ export default function MyLearningView() {
               {activeList.map((topic) => {
                 const style = styleFor(topic.subjectCode);
                 return (
-                  <div key={topic.topicId} className={`flex items-center justify-between p-3 rounded-xl border hover:border-cyan-500/30 transition-all ${rowBg}`}>
+                  <div key={topic.topicId} className={`flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-3 rounded-xl border hover:border-cyan-500/30 transition-all ${rowBg}`}>
                     <div className="flex items-center gap-3 flex-1 min-w-0">
                       <div className={`w-9 h-9 rounded-lg border flex items-center justify-center text-base font-semibold flex-shrink-0 ${style.iconColor}`}>
                         {style.icon}
@@ -266,9 +266,9 @@ export default function MyLearningView() {
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-6">
+                    <div className="flex items-center gap-3 sm:gap-6 flex-wrap">
                       {/* Progress bar */}
-                      <div className="flex items-center gap-2 w-44">
+                      <div className="flex items-center gap-2 w-24 sm:w-44">
                         <div className={`flex-1 h-1.5 rounded-full overflow-hidden ${theme === 'light' ? 'bg-slate-200' : 'bg-[rgba(56,78,135,0.2)]'}`}>
                           <div className={`h-full rounded-full ${style.barColor}`} style={{ width: `${topic.masteryScore}%` }} />
                         </div>
@@ -310,7 +310,7 @@ export default function MyLearningView() {
           {recommendations.length === 0 ? (
             <p className="text-gray-500 text-xs text-center py-4">You've started every topic in your curriculum. Great work!</p>
           ) : (
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               {recommendations.map((topic) => {
                 const style = styleFor(topic.subjectCode);
                 return (
@@ -337,7 +337,7 @@ export default function MyLearningView() {
       </div>
 
       {/* Right Column */}
-      <div className="w-[300px] flex-shrink-0 space-y-4 overflow-y-auto pb-6">
+      <div className="w-full lg:w-[300px] flex-shrink-0 space-y-4 lg:overflow-y-auto pb-6">
         {/* My Performance */}
         <div className="glass-card p-5">
           <div className="flex items-center justify-between mb-4">

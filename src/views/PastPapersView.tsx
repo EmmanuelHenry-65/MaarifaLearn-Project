@@ -170,9 +170,9 @@ export default function PastPapersView() {
   }
 
   return (
-    <div className="flex gap-6 mt-2 flex-1 min-h-0">
+    <div className="flex flex-col lg:flex-row gap-6 mt-2 flex-1 min-h-0 overflow-y-auto lg:overflow-visible">
       {/* Left/Center Column */}
-      <div className="flex-1 min-w-0 space-y-4 overflow-y-auto pr-1">
+      <div className="flex-1 min-w-0 space-y-4 lg:overflow-y-auto pr-1">
 
         {notice && (
           <div className="glass-card px-4 py-3 flex items-center justify-between">
@@ -182,7 +182,7 @@ export default function PastPapersView() {
         )}
 
         {/* Stats Row */}
-        <div className="grid grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           {stats.map((stat, i) => (
             <div key={i} className="glass-card p-4 flex items-center gap-4">
               <div className={`w-12 h-12 rounded-xl border flex items-center justify-center text-xl flex-shrink-0 ${stat.bg}`}>
@@ -205,12 +205,12 @@ export default function PastPapersView() {
           ))}
         </div>
 
-        <div className="glass-card p-4 flex items-center justify-between">
+        <div className="glass-card p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div>
             <h3 className="text-white font-bold text-base">Assessment & Examination Center</h3>
             <p className="text-gray-500 text-xs mt-1">Open authentic exams, timed mocks, AI walkthroughs, analytics, and smart review.</p>
           </div>
-          <Link to="/exams" className="px-4 py-2 rounded-lg bg-cyan-500 text-white text-xs font-bold hover:bg-cyan-600 transition-colors">
+          <Link to="/exams" className="flex-shrink-0 text-center px-4 py-2 rounded-lg bg-cyan-500 text-white text-xs font-bold hover:bg-cyan-600 transition-colors">
             Open Exam Center
           </Link>
         </div>
@@ -258,8 +258,8 @@ export default function PastPapersView() {
         {/* Papers List */}
         <div className="glass-card p-5">
           {/* Tabs & Search */}
-          <div className="flex items-center justify-between mb-5 gap-4">
-            <div className="flex items-center gap-4 border-b border-[rgba(56,78,135,0.15)] pb-1 flex-1">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-5 gap-3 sm:gap-4">
+            <div className="flex items-center gap-4 border-b border-[rgba(56,78,135,0.15)] pb-1 flex-1 overflow-x-auto scrollbar-hide">
               {(['All Papers', 'My Attempts', 'Bookmarked'] as const).map((tab) => (
                 <button
                   key={tab}
@@ -273,13 +273,13 @@ export default function PastPapersView() {
               ))}
             </div>
             <div className="flex items-center gap-2">
-              <div className="relative">
+              <div className="relative flex-1 sm:flex-none">
                 <input
                   type="text"
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   placeholder="Search papers..."
-                  className="w-40 px-3 py-1.5 rounded-lg bg-[rgba(17,24,50,0.8)] border border-[rgba(56,78,135,0.3)] text-gray-300 text-xs placeholder-gray-600 focus:outline-none focus:border-cyan-500/40"
+                  className="w-full sm:w-40 px-3 py-1.5 rounded-lg bg-[rgba(17,24,50,0.8)] border border-[rgba(56,78,135,0.3)] text-gray-300 text-xs placeholder-gray-600 focus:outline-none focus:border-cyan-500/40"
                 />
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-500"><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg>
               </div>
@@ -341,7 +341,7 @@ export default function PastPapersView() {
               const action = actionForStatus(p.completionStatus);
               const bookmarked = bookmarkedIds.has(p.id);
               return (
-                <div key={p.id} className="grid grid-cols-[1fr_auto_auto_auto_auto] items-center gap-4 p-3.5 rounded-xl bg-[rgba(17,24,50,0.5)] border border-[rgba(56,78,135,0.15)] hover:border-[rgba(56,78,135,0.3)] transition-all">
+                <div key={p.id} className="flex flex-col sm:grid sm:grid-cols-[1fr_auto_auto_auto_auto] sm:items-center gap-3 sm:gap-4 p-3.5 rounded-xl bg-[rgba(17,24,50,0.5)] border border-[rgba(56,78,135,0.15)] hover:border-[rgba(56,78,135,0.3)] transition-all">
                   <div className="flex items-center gap-4 min-w-0">
                     <div className={`w-10 h-10 rounded-xl border flex items-center justify-center text-lg flex-shrink-0 ${style.color}`}>
                       {p.subjectIcon}
@@ -360,6 +360,7 @@ export default function PastPapersView() {
                       </p>
                     </div>
                   </div>
+                  <div className="flex items-center gap-2 flex-wrap sm:contents">
                   <div className="flex items-center gap-2">
                     {p.completionStatus === 'Not Started' ? (
                       <span className="text-gray-500 text-[10px] italic px-2">Not attempted yet</span>
@@ -410,6 +411,7 @@ export default function PastPapersView() {
                       </>
                     )}
                   </div>
+                  </div>
                 </div>
               );
             })}
@@ -433,7 +435,7 @@ export default function PastPapersView() {
       </div>
 
       {/* Right Column */}
-      <div className="w-[300px] flex-shrink-0 space-y-4 overflow-y-auto pb-6">
+      <div className="w-full lg:w-[300px] flex-shrink-0 space-y-4 lg:overflow-y-auto pb-6">
 
         {/* AI Tutor Widget */}
         <div className="glass-card p-5 relative overflow-hidden">

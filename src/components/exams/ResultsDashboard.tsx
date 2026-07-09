@@ -34,12 +34,12 @@ export default function ResultsDashboard({ paper, questions, gradedAnswers, resu
   const timePerQuestion = questions.length ? (elapsedMinutes / questions.length).toFixed(1) : '0.0';
 
   return (
-    <div className="flex gap-6 mt-2 flex-1 min-h-0">
+    <div className="flex flex-col lg:flex-row gap-6 mt-2 flex-1 min-h-0 overflow-y-auto lg:overflow-visible">
       {/* Main Content */}
-      <div className="flex-1 min-w-0 space-y-4 overflow-y-auto pr-1">
+      <div className="flex-1 min-w-0 space-y-4 lg:overflow-y-auto pr-1">
 
         {/* Header Card */}
-        <div className={`${cardBg} rounded-2xl p-6 flex items-center justify-between`}>
+        <div className={`${cardBg} rounded-2xl p-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-5`}>
           <div>
             <span className="px-3 py-1 rounded-full bg-green-500/10 border border-green-500/20 text-green-400 text-[10px] font-bold uppercase tracking-wider">
               Exam Completed
@@ -75,9 +75,9 @@ export default function ResultsDashboard({ paper, questions, gradedAnswers, resu
         </div>
 
         {/* Analytics Row */}
-        <div className="grid grid-cols-5 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-5 gap-4">
           {/* Question Breakdown */}
-          <div className={`${cardBg} rounded-2xl p-5 col-span-3`}>
+          <div className={`${cardBg} rounded-2xl p-5 sm:col-span-3`}>
             <h3 className={`font-bold text-base mb-5 ${textColor}`}>Question Breakdown</h3>
             <div className="space-y-3">
               {questions.map((q, i) => {
@@ -102,7 +102,7 @@ export default function ResultsDashboard({ paper, questions, gradedAnswers, resu
           </div>
 
           {/* Performance Analytics */}
-          <div className={`${cardBg} rounded-2xl p-5 col-span-2`}>
+          <div className={`${cardBg} rounded-2xl p-5 sm:col-span-2`}>
             <h3 className={`font-bold text-base mb-5 ${textColor}`}>Performance Analytics</h3>
             <div className="grid grid-cols-2 gap-3">
               <div className={`${innerCardBg} rounded-xl p-4`}>
@@ -127,7 +127,7 @@ export default function ResultsDashboard({ paper, questions, gradedAnswers, resu
       </div>
 
       {/* Right Sidebar */}
-      <div className="w-[300px] flex-shrink-0 space-y-4 overflow-y-auto pb-6">
+      <div className="w-full lg:w-[300px] flex-shrink-0 space-y-4 lg:overflow-y-auto pb-6">
 
         {/* AI Revision Plan */}
         <div className={`${cardBg} rounded-2xl p-5`}>

@@ -33,7 +33,7 @@ export default function SubjectSelector({ subjects, selectedSubject, onSelect }:
           <p className={`text-xs mt-1 ${mutedColor}`}>Choose one of the nine supported examination subjects.</p>
         </div>
       </div>
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
         {subjects.map((subject) => (
           <button
             key={subject.id}
