@@ -6,7 +6,7 @@ import { formatRelativeTime } from '../utils/time';
 import { forceDownloadUrl } from '../utils/download';
 import VideoModal from '../components/common/VideoModal';
 
-const filterTabs = ['All', 'pdf', 'video', 'audio', 'image', 'link'] as const;
+const ALL_RESOURCE_TYPES = ['pdf', 'video', 'audio', 'image', 'link'] as const;
 
 const RESOURCE_TYPE_META: Record<ResourceType, { label: string; badgeColor: string; icon: string; gradient: string }> = {
   pdf: { label: 'PDF', badgeColor: 'bg-green-500', icon: '📄', gradient: 'bg-gradient-to-br from-green-800 to-emerald-900' },
@@ -92,12 +92,20 @@ function ResourceCard({
 }
 
 export default function ResourcesView() {
-  const [activeTab, setActiveTab] = useState<typeof filterTabs[number]>('All');
+  const [activeTab, setActiveTab] = useState<'All' | ResourceType>('All');
   const [searchQuery, setSearchQuery] = useState('');
   const [showAllRecommended, setShowAllRecommended] = useState(false);
   const featuredSectionRef = useRef<HTMLDivElement>(null);
   const { stats, subjects, featured, recentlyViewed, bookmarkedIds, toggleBookmark, loading, error } = useResourcesData();
   const [playingVideo, setPlayingVideo] = useState<ResourceSummary | null>(null);
+
+  // Only show tabs for resource types that actually exist, instead of a
+  // fixed list -- Audio/Image/Link have no content yet and offering a
+  // filter with zero possible results is confusing, not helpful.
+  const visibleTabs = useMemo(() => {
+    const present = new Set(featured.map((r) => r.resourceType));
+    return ['All', ...ALL_RESOURCE_TYPES.filter((t) => present.has(t))] as const;
+  }, [featured]);
 
   const filteredFeatured = useMemo(() => {
     return featured
@@ -166,7 +174,7 @@ export default function ResourcesView() {
 
         {/* Filter Tabs */}
         <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-hide">
-          {filterTabs.map((tab) => (
+          {visibleTabs.map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}

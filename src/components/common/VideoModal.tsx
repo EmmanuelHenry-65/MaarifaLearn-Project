@@ -44,7 +44,11 @@ export default function VideoModal({ title, url, onClose }: VideoModalProps) {
               src={`https://www.youtube.com/embed/${videoId}?autoplay=1`}
               title={title}
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-              allowFullScreen
+              // No allowFullScreen -- YouTube's native fullscreen takes over
+              // the entire browser viewport with no visible way back to this
+              // modal's close button, leaving students stuck. The video stays
+              // large and playable inside the modal, which always has a
+              // visible X, click-outside-to-close, and an Escape handler.
             />
           ) : (
             <div className="absolute inset-0 flex items-center justify-center text-gray-400 text-sm">
