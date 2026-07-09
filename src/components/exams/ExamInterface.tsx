@@ -3,6 +3,13 @@ import type { ExamPaper, ExamQuestion } from '../../services/examinations.servic
 import type { ExamMode } from '../../views/ExamsView';
 import { useTheme } from '../../context/ThemeContext';
 import SimpleCalculator from '../common/SimpleCalculator';
+import { CompanionFace } from '../companion/AICompanion';
+
+const MOOD_REPLIES: Record<'confident' | 'okay' | 'nervous', string> = {
+  confident: "Love that energy — go show this paper what you've got!",
+  okay: "That's a great place to start from. Take it one question at a time.",
+  nervous: "Totally normal. Take a breath — you've prepared for this, just do your best.",
+};
 
 interface ExamInterfaceProps {
   paper: ExamPaper;
@@ -32,6 +39,19 @@ export default function ExamInterface({ paper, questions, mode, startedAt, answe
   const [paused, setPaused] = useState(false);
   const [tool, setTool] = useState<string | null>(null);
   const autoSubmittedRef = useRef(false);
+  const [moodCheck, setMoodCheck] = useState<'hidden' | 'asking' | { reply: string }>('hidden');
+
+  // A quick, caring check-in shortly after the exam starts -- not a survey,
+  // just a moment of human warmth before diving into a timed paper.
+  useEffect(() => {
+    const t = window.setTimeout(() => setMoodCheck('asking'), 10000);
+    return () => window.clearTimeout(t);
+  }, []);
+
+  const answerMoodCheck = (mood: keyof typeof MOOD_REPLIES) => {
+    setMoodCheck({ reply: MOOD_REPLIES[mood] });
+    window.setTimeout(() => setMoodCheck('hidden'), 4000);
+  };
 
   const question = questions[index];
   const answeredCount = questions.filter((item) => answers[item.id]?.trim()).length;
@@ -143,6 +163,33 @@ export default function ExamInterface({ paper, questions, mode, startedAt, answe
           </div>
         </div>
       </main>
+
+      {moodCheck !== 'hidden' && (
+        <div role="status" aria-live="polite" className="fixed bottom-6 left-6 z-40 w-[280px] max-w-[calc(100vw-3rem)] animate-companion-in">
+          <div className={`rounded-2xl border p-4 flex gap-3 items-start ${panelBg}`}>
+            <div className="w-9 h-9 rounded-xl flex items-center justify-center text-white flex-shrink-0 bg-gradient-to-br from-teal-400 to-blue-600">
+              <CompanionFace mood="happy" />
+            </div>
+            <div className="flex-1 min-w-0">
+              {moodCheck === 'asking' ? (
+                <>
+                  <p className={`text-xs font-semibold leading-snug ${textColor}`}>How are you feeling about this exam?</p>
+                  <div className="flex flex-wrap gap-1.5 mt-2">
+                    <button onClick={() => answerMoodCheck('confident')} className="px-2.5 py-1 rounded-lg bg-cyan-500/10 border border-cyan-500/20 text-cyan-600 text-[10px] font-bold hover:bg-cyan-500/20 transition-colors">Confident 😎</button>
+                    <button onClick={() => answerMoodCheck('okay')} className="px-2.5 py-1 rounded-lg bg-cyan-500/10 border border-cyan-500/20 text-cyan-600 text-[10px] font-bold hover:bg-cyan-500/20 transition-colors">Okay 🙂</button>
+                    <button onClick={() => answerMoodCheck('nervous')} className="px-2.5 py-1 rounded-lg bg-cyan-500/10 border border-cyan-500/20 text-cyan-600 text-[10px] font-bold hover:bg-cyan-500/20 transition-colors">Nervous 😰</button>
+                  </div>
+                </>
+              ) : (
+                <p className={`text-xs font-semibold leading-snug ${textColor}`}>{moodCheck.reply}</p>
+              )}
+            </div>
+            <button onClick={() => setMoodCheck('hidden')} aria-label="Dismiss" className={`${mutedColor} hover:text-cyan-500 transition-colors flex-shrink-0`}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

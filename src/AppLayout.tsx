@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import Sidebar from './components/Sidebar';
 import TopNav from './components/TopNav';
+import AICompanion from './components/companion/AICompanion';
 import { useTheme } from './context/ThemeContext';
 import { useAuth } from './context/AuthContext';
 import { getProfile } from './services/learning.service';
@@ -133,6 +134,8 @@ export default function AppLayout() {
           <Outlet />
         </div>
       </div>
+
+      <AICompanion sidebarCollapsed={sidebarCollapsed} />
     </div>
   );
 }
