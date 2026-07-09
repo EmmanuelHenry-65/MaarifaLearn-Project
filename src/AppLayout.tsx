@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import Sidebar from './components/Sidebar';
 import TopNav from './components/TopNav';
@@ -49,6 +49,9 @@ export default function AppLayout() {
   const { user } = useAuth();
   const [firstName, setFirstName] = useState<string | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(
+    () => localStorage.getItem('ml-sidebar-collapsed') === 'true'
+  );
 
   // Loads the signed-in user's saved theme from their account once per session.
   usePreferencesSync();
@@ -75,6 +78,28 @@ export default function AppLayout() {
   // For subject detail pages like /subjects/mathematics, treat as Subjects
   const isSubjectDetail = location.pathname.startsWith('/subjects/');
   const isWorkspace = location.pathname.startsWith('/workspace');
+
+  const toggleSidebarCollapsed = () => {
+    setSidebarCollapsed((prev) => {
+      const next = !prev;
+      localStorage.setItem('ml-sidebar-collapsed', String(next));
+      return next;
+    });
+  };
+
+  // Auto-collapse the sidebar to a slim icon rail the moment Workspace is entered
+  // (it's the most crowded page) — but only on that transition, so a manual
+  // expand while browsing between subjects inside Workspace isn't undone.
+  const wasWorkspaceRef = useRef(isWorkspace);
+  useEffect(() => {
+    if (isWorkspace && !wasWorkspaceRef.current && !sidebarCollapsed) {
+      setSidebarCollapsed(true);
+      localStorage.setItem('ml-sidebar-collapsed', 'true');
+    }
+    wasWorkspaceRef.current = isWorkspace;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isWorkspace]);
+
   const key = isSubjectDetail ? '/subjects' : isWorkspace ? '/workspace' : location.pathname;
   const meta = routeToTitle[key] || routeToTitle['/dashboard'];
   const title = key === '/dashboard' ? `${timeOfDayGreeting()}${firstName ? `, ${firstName}` : ''}! 👋` : meta.title;
@@ -90,9 +115,19 @@ export default function AppLayout() {
       {sidebarOpen && (
         <div className="fixed inset-0 bg-black/50 z-40 lg:hidden" onClick={() => setSidebarOpen(false)} />
       )}
-      <Sidebar activeTab={activeTab} open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+      <Sidebar
+        activeTab={activeTab}
+        open={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
+        collapsed={sidebarCollapsed}
+        onToggleCollapsed={toggleSidebarCollapsed}
+      />
 
-      <div className="flex-1 lg:ml-[200px] relative z-10 flex flex-col p-4 sm:p-6 overflow-hidden min-w-0">
+      <div
+        className={`flex-1 relative z-10 flex flex-col p-4 sm:p-6 overflow-hidden min-w-0 transition-[margin] duration-300 ${
+          sidebarCollapsed ? 'lg:ml-16' : 'lg:ml-[200px]'
+        }`}
+      >
         <TopNav title={title} subtitle={meta.subtitle} onMenuClick={() => setSidebarOpen(true)} />
         <div key={location.pathname} className="page-transition flex-1 min-h-0">
           <Outlet />

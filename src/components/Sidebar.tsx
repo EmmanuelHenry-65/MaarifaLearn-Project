@@ -8,6 +8,8 @@ interface SidebarProps {
   activeTab: string;
   open: boolean;
   onClose: () => void;
+  collapsed: boolean;
+  onToggleCollapsed: () => void;
 }
 
 const ThemeSpecificIcon = ({ theme, isActive, originalIcon }: { theme: 'dark' | 'light', isActive: boolean, originalIcon: React.ReactNode }) => {
@@ -95,7 +97,7 @@ const icons: Record<string, React.JSX.Element> = {
   ),
 };
 
-export default function Sidebar({ open, onClose }: SidebarProps) {
+export default function Sidebar({ open, onClose, collapsed, onToggleCollapsed }: SidebarProps) {
   const { theme } = useTheme();
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -128,20 +130,47 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
 
   return (
     <aside
-      className={`fixed left-0 top-0 bottom-0 w-[220px] sm:w-[200px] flex flex-col border-r z-50 transition-transform duration-300 lg:translate-x-0 ${
+      className={`fixed left-0 top-0 bottom-0 w-[220px] ${collapsed ? 'lg:w-16' : 'lg:w-[200px]'} flex flex-col border-r z-50 transition-[transform,width] duration-300 lg:translate-x-0 ${
         open ? 'translate-x-0' : '-translate-x-full'
       } ${theme === 'light' ? 'bg-gradient-to-b from-white to-slate-50 border-slate-200 shadow-xl shadow-slate-200/50' : 'bg-gradient-to-b from-[#0d1225] to-[#0a0e1a] border-[rgba(56,78,135,0.2)]'}`}
     >
+      {/* Collapse/expand toggle (desktop only) — straddles the right border */}
+      <button
+        type="button"
+        onClick={onToggleCollapsed}
+        aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+        title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+        className={`hidden lg:flex absolute -right-3 top-8 w-6 h-6 rounded-full items-center justify-center border shadow-md z-10 ${
+          theme === 'light'
+            ? 'bg-white border-slate-200 text-slate-500 hover:text-cyan-600 hover:border-cyan-300'
+            : 'bg-[#151b34] border-[rgba(56,78,135,0.35)] text-gray-400 hover:text-cyan-400'
+        }`}
+      >
+        <svg
+          width="12"
+          height="12"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          className={`transition-transform duration-300 ${collapsed ? 'rotate-180' : ''}`}
+        >
+          <polyline points="15,6 9,12 15,18" />
+        </svg>
+      </button>
+
       {/* Logo */}
-      <div className="flex items-center justify-between gap-2.5 px-5 py-5 flex-shrink-0">
+      <div className={`flex items-center gap-2.5 px-5 py-5 flex-shrink-0 ${collapsed ? 'lg:px-0 lg:justify-center' : 'justify-between'}`}>
         <div className="flex items-center gap-2.5">
-          <div className="relative w-9 h-9 rounded-xl bg-gradient-to-br from-teal-400 to-blue-600 flex items-center justify-center shadow-lg shadow-teal-500/20">
+          <div className="relative w-9 h-9 rounded-xl bg-gradient-to-br from-teal-400 to-blue-600 flex items-center justify-center shadow-lg shadow-teal-500/20 flex-shrink-0">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
               <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" />
               <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" />
             </svg>
           </div>
-          <div>
+          <div className={collapsed ? 'lg:hidden' : ''}>
             <span className="text-white font-bold text-sm leading-tight block">Maarifa</span>
             <span className="text-teal-400 font-bold text-sm leading-tight block">Learn</span>
           </div>
@@ -160,15 +189,18 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
       </div>
 
       {/* Nav Items */}
-      <nav className="flex-1 px-2 space-y-0.5 overflow-y-auto min-h-0">
+      <nav className="flex-1 px-2 space-y-0.5 overflow-y-auto overflow-x-hidden min-h-0">
         {menuItems.map((item) => (
           <NavLink
             key={item.label}
             to={item.path}
             end={item.path === '/'}
             onClick={onClose}
+            title={collapsed ? item.label : undefined}
             className={({ isActive }) =>
               `sidebar-item w-full flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] font-medium transition-all group ${
+                collapsed ? 'lg:justify-center lg:px-0' : ''
+              } ${
                 isActive
                   ? theme === 'light'
                     ? 'active text-cyan-700 bg-cyan-50 border-l-[3px] border-cyan-600 font-bold'
@@ -186,7 +218,7 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
                   isActive={isActive}
                   originalIcon={icons[item.icon]}
                 />
-                {item.label}
+                <span className={collapsed ? 'lg:hidden' : ''}>{item.label}</span>
               </>
             )}
           </NavLink>
@@ -196,7 +228,7 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
       {/* Profile & Motivation container at the bottom */}
       <div className={`flex-shrink-0 p-3 space-y-3 bg-gradient-to-t to-transparent ${theme === 'light' ? 'from-slate-100/50' : 'from-[#0a0e1a] via-[#0d1225]'}`}>
         {/* Motivational Card */}
-        <div className={`p-3.5 rounded-xl relative overflow-hidden ${theme === 'light' ? 'bg-gradient-to-br from-cyan-600 to-blue-700 shadow-lg shadow-cyan-200' : 'bg-gradient-to-br from-[#1a1040] to-[#15103a] border border-[rgba(100,60,180,0.3)]'}`}>
+        <div className={`p-3.5 rounded-xl relative overflow-hidden ${collapsed ? 'lg:hidden' : ''} ${theme === 'light' ? 'bg-gradient-to-br from-cyan-600 to-blue-700 shadow-lg shadow-cyan-200' : 'bg-gradient-to-br from-[#1a1040] to-[#15103a] border border-[rgba(100,60,180,0.3)]'}`}>
           <div className="text-center mb-1">
             <span className="text-2xl">🏆</span>
           </div>
@@ -211,16 +243,17 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
         {/* Profile item - navigates to Settings */}
         <button
           onClick={() => navigate('/settings')}
-          className={`w-full flex items-center gap-2.5 p-2 rounded-xl border transition-all ${theme === 'light' ? 'bg-white border-slate-200 shadow-sm hover:border-slate-300' : 'bg-[rgba(17,24,50,0.5)] border-[rgba(56,78,135,0.15)] hover:border-[rgba(56,78,135,0.35)]'}`}
+          title={collapsed ? displayName : undefined}
+          className={`w-full flex items-center gap-2.5 p-2 rounded-xl border transition-all ${collapsed ? 'lg:justify-center lg:px-0' : ''} ${theme === 'light' ? 'bg-white border-slate-200 shadow-sm hover:border-slate-300' : 'bg-[rgba(17,24,50,0.5)] border-[rgba(56,78,135,0.15)] hover:border-[rgba(56,78,135,0.35)]'}`}
         >
           <div className={`w-7 h-7 rounded-full overflow-hidden flex-shrink-0 ring-1 flex items-center justify-center text-[10px] font-bold text-white bg-gradient-to-br from-teal-400 to-blue-600 ${theme === 'light' ? 'ring-slate-200' : 'ring-[rgba(56,78,135,0.3)]'}`}>
             {avatarUrl ? <img src={avatarUrl} alt={displayName} className="w-full h-full object-cover" /> : initials || '?'}
           </div>
-          <div className="text-left flex-1 min-w-0">
+          <div className={`text-left flex-1 min-w-0 ${collapsed ? 'lg:hidden' : ''}`}>
             <p className={`text-xs font-semibold leading-tight truncate ${theme === 'light' ? 'text-slate-800' : 'text-white'}`}>{displayName}</p>
             <p className="text-gray-500 text-[10px] leading-tight truncate">Learner</p>
           </div>
-          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-gray-500 mr-0.5">
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={`text-gray-500 mr-0.5 flex-shrink-0 ${collapsed ? 'lg:hidden' : ''}`}>
             <polyline points="6,9 12,15 18,9" />
           </svg>
         </button>
