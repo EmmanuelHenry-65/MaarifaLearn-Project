@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Navigate, useParams } from 'react-router-dom';
 import { getDefaultLesson, getDefaultTopic, getWorkspaceSubject } from '../data/workspaceData';
 import type { WorkspaceLesson, WorkspaceMode, WorkspaceTopic } from '../data/workspaceData';
@@ -34,7 +34,6 @@ export default function WorkspaceView() {
   const [activeTopic, setActiveTopic] = useState<WorkspaceTopic | undefined>(undefined);
   const [query, setQuery] = useState('');
   const [aiOpen, setAiOpen] = useState(false);
-  const [progressBump, setProgressBump] = useState(0);
   const [resolvedTopicId, setResolvedTopicId] = useState<string | null>(null);
   const [resources, setResources] = useState<SubjectResource[]>([]);
   const [resourcesLoading, setResourcesLoading] = useState(false);
@@ -150,7 +149,6 @@ export default function WorkspaceView() {
   }, [user?.id, activeTopic?.id]);
 
   const isUnknownSubject = Boolean(subjectId && !subject);
-  const progress = useMemo(() => Math.min(100, (subject?.progress ?? 0) + progressBump), [progressBump, subject?.progress]);
 
   if (!subjectId) return <SubjectSelection />;
   if (isUnknownSubject) return <Navigate to="/workspace" replace />;
@@ -164,7 +162,7 @@ export default function WorkspaceView() {
 
   return (
     <div className="flex flex-col gap-4 flex-1 min-h-0">
-      <WorkspaceHeader subject={{ ...subject, progress }} activeMode={activeMode} query={query} onQueryChange={setQuery} progressSummary={progressSummary} />
+      <WorkspaceHeader subject={subject} activeMode={activeMode} query={query} onQueryChange={setQuery} progressSummary={progressSummary} progressLoading={progressLoading} />
 
       <div className="flex gap-4 flex-1 min-h-0">
         <SubjectSidebar
@@ -192,10 +190,8 @@ export default function WorkspaceView() {
             resolvedTopicId={resolvedTopicId}
             progressSummary={progressSummary}
             progressLoading={progressLoading}
-            progressBump={progressBump}
             topicProgress={topicProgress}
             onProgressBump={() => {
-              setProgressBump((value) => Math.min(18, value + 2));
               if (user && resolvedTopicId) {
                 recordTopicProgress(user.id, resolvedTopicId, 15)
                   .then(() => checkForNewAchievements(user.id))

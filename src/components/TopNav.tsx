@@ -6,6 +6,7 @@ import { supabase } from '../lib/supabase';
 import { getProfile, updateGrade, type ProfileInfo } from '../services/learning.service';
 import { getNotifications, getUnreadCount, markAllRead, type AppNotification } from '../services/notifications.service';
 import ThemeToggle from './ThemeToggle';
+import Spinner from './common/Spinner';
 
 interface TopNavProps {
   title: string;
@@ -297,7 +298,7 @@ export default function TopNav({ title, subtitle, onMenuClick }: TopNavProps) {
           {openMenu === 'notifications' && (
             <div className={`absolute right-0 top-full mt-2 w-72 rounded-xl border p-2 z-50 max-h-80 overflow-y-auto ${dropdownPanel}`}>
               {!notificationsLoaded ? (
-                <p className="px-3 py-4 text-sm text-gray-500 text-center">Loading...</p>
+                <Spinner />
               ) : notifications.length === 0 ? (
                 <p className="px-3 py-4 text-sm text-gray-500 text-center">No notifications yet.</p>
               ) : (

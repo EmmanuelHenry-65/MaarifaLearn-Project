@@ -8,6 +8,7 @@ interface WorkspaceHeaderProps {
   query: string;
   onQueryChange: (value: string) => void;
   progressSummary?: SubjectProgressSummary | null;
+  progressLoading?: boolean;
 }
 
 const modeLabels: Record<WorkspaceMode, string> = {
@@ -24,16 +25,21 @@ const modeLabels: Record<WorkspaceMode, string> = {
   progress: 'Progress',
 };
 
-export default function WorkspaceHeader({ subject, activeMode, query, onQueryChange, progressSummary }: WorkspaceHeaderProps) {
+export default function WorkspaceHeader({ subject, activeMode, query, onQueryChange, progressSummary, progressLoading }: WorkspaceHeaderProps) {
   const { theme } = useTheme();
-  const lessonsLabel = progressSummary
-    ? `${progressSummary.topicsCompleted}/${progressSummary.totalTopics} topics complete`
-    : `${subject.lessonsCompleted}/${subject.totalLessons} lessons complete`;
-  const masteryLabel = progressSummary
-    ? progressSummary.totalTopics
+  // Never fall back to workspaceData.ts's placeholder numbers -- a real
+  // fetch that's loading or came back empty should read as "loading"/"0",
+  // never as a plausible-looking invented statistic.
+  const lessonsLabel = progressLoading
+    ? 'Loading progress...'
+    : progressSummary
+      ? `${progressSummary.topicsCompleted}/${progressSummary.totalTopics} topics complete`
+      : 'No progress yet';
+  const masteryLabel = progressLoading
+    ? '...'
+    : progressSummary?.totalTopics
       ? `${Math.round((progressSummary.topicsCompleted / progressSummary.totalTopics) * 100)}%`
-      : '0%'
-    : `${subject.progress}%`;
+      : '0%';
   const textColor = theme === 'light' ? 'text-slate-900' : 'text-white';
   const mutedColor = theme === 'light' ? 'text-slate-500' : 'text-gray-400';
   const inputClass = theme === 'light'

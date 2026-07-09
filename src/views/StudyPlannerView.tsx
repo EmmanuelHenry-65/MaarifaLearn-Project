@@ -19,6 +19,7 @@ import {
 } from '../services/studyPlanner.service';
 import TaskItem from '../components/studyPlanner/TaskItem';
 import TaskModal from '../components/studyPlanner/TaskModal';
+import Spinner from '../components/common/Spinner';
 
 const FETCH_PAST_DAYS = 60;
 const FETCH_FUTURE_DAYS = 90;
@@ -150,7 +151,7 @@ export default function StudyPlannerView() {
   if (loading) {
     return (
       <div className="flex items-center justify-center flex-1 min-h-0">
-        <p className={mutedColor}>Loading your study planner…</p>
+        <Spinner size="md" label="Loading your study planner..." />
       </div>
     );
   }

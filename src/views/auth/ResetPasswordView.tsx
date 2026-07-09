@@ -5,6 +5,7 @@ import AuthButton from '../../components/auth/AuthButton';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import { updatePassword, logout } from '../../services/auth.service';
+import Spinner from '../../components/common/Spinner';
 
 export default function ResetPasswordView() {
   const { theme } = useTheme();
@@ -46,7 +47,7 @@ export default function ResetPasswordView() {
   }
 
   if (loading) {
-    return <p className={`text-center text-sm ${mutedColor}`}>Loading...</p>;
+    return <Spinner />;
   }
 
   if (done) {

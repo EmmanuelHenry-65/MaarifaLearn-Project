@@ -13,6 +13,7 @@ import {
   type UpcomingLesson,
 } from '../services/learning.service';
 import { styleFor } from '../lib/subjectStyle';
+import Spinner from '../components/common/Spinner';
 
 function formatRelativeTime(iso: string | null): string {
   if (!iso) return 'Not started yet';
@@ -151,7 +152,7 @@ export default function MyLearningView() {
   if (loading) {
     return (
       <div className="flex-1 flex items-center justify-center min-h-0">
-        <p className={mutedColor}>Loading your learning data...</p>
+        <Spinner size="md" label="Loading your learning data..." />
       </div>
     );
   }
@@ -484,7 +485,7 @@ export default function MyLearningView() {
           </div>
 
           {upcomingLoading ? (
-            <p className="text-gray-500 text-xs text-center py-4">Loading...</p>
+            <Spinner />
           ) : upcomingLessons.length === 0 ? (
             <p className="text-gray-500 text-xs text-center py-4">No upcoming lessons scheduled this month.</p>
           ) : (

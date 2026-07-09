@@ -9,6 +9,7 @@ import {
   type TutorSession,
   type TutorAttachment,
 } from '../services/aiTutor.service';
+import Spinner from '../components/common/Spinner';
 
 function formatMessageTime(iso: string): string {
   return new Date(iso).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
@@ -351,7 +352,7 @@ export default function AITutorView() {
         )}
         {loading ? (
           <div className="flex-1 flex items-center justify-center">
-            <p className="text-gray-500 text-sm">Loading your conversations...</p>
+            <Spinner size="md" label="Loading your conversations..." />
           </div>
         ) : !hasConversation ? (
           <>
@@ -430,7 +431,7 @@ export default function AITutorView() {
             </svg>
           </button>
           {!historyOpen ? null : loading ? (
-            <p className="text-gray-500 text-xs">Loading...</p>
+            <Spinner />
           ) : sessions.length === 0 ? (
             <p className="text-gray-500 text-xs">No conversations yet — ask a question to get started.</p>
           ) : (

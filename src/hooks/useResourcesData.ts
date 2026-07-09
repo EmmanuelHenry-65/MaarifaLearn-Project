@@ -47,7 +47,9 @@ function mapResourceRow(r: any): ResourceSummary {
     resourceType: r.resource_type,
     url: r.url,
     createdAt: r.created_at,
-    subjectName: r.topic?.lesson?.subject?.name ?? null,
+    // Subject-wide resources (curriculum notes/pamphlets) carry subject_id
+    // directly; topic-scoped resources derive it through the topic's lesson.
+    subjectName: r.topic?.lesson?.subject?.name ?? r.subject?.name ?? null,
   };
 }
 
@@ -83,12 +85,12 @@ export function useResourcesData() {
           supabase.from('topics').select('*', { count: 'exact', head: true }),
           supabase.from('resources').select('created_at').order('created_at', { ascending: false }).limit(1),
           supabase.from('subjects').select('id, name'),
-          supabase.from('resources').select('id, topic:topics(lesson:lessons(subject_id))'),
+          supabase.from('resources').select('id, subject_id, topic:topics(lesson:lessons(subject_id))'),
           supabase
             .from('resources')
-            .select('id, title, resource_type, url, created_at, topic:topics(title, lesson:lessons(subject:subjects(name)))')
+            .select('id, title, resource_type, url, created_at, subject:subjects(name), topic:topics(title, lesson:lessons(subject:subjects(name)))')
             .order('created_at', { ascending: false })
-            .limit(10),
+            .limit(60),
         ]);
 
         if (!active) return;
@@ -106,7 +108,7 @@ export function useResourcesData() {
 
         const countsBySubject = new Map<string, number>();
         (resourceSubjectRowsRes.data ?? []).forEach((row: any) => {
-          const subjectId = row.topic?.lesson?.subject_id;
+          const subjectId = row.subject_id ?? row.topic?.lesson?.subject_id;
           if (!subjectId) return;
           countsBySubject.set(subjectId, (countsBySubject.get(subjectId) ?? 0) + 1);
         });

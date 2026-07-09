@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useAchievementCelebration } from '../context/AchievementCelebrationContext';
 import { ensureProfile, getMyLearningData, computeStreak, computeLongestStreak, type LearningTopic } from '../services/learning.service';
+import Spinner from '../components/common/Spinner';
 import {
   BADGE_DEFINITIONS,
   MILESTONE_DEFINITIONS,
@@ -135,7 +136,7 @@ export default function AchievementsView() {
   if (loading) {
     return (
       <div className="flex-1 flex items-center justify-center min-h-0">
-        <p className="text-gray-500">Loading your achievements...</p>
+        <Spinner size="md" label="Loading your achievements..." />
       </div>
     );
   }

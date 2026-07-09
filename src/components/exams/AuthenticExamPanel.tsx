@@ -9,6 +9,7 @@ import {
 } from '../../services/examinations.service';
 import { forceDownloadUrl } from '../../utils/download';
 import PdfModal from '../common/PdfModal';
+import Spinner from '../common/Spinner';
 
 interface AuthenticExamPanelProps {
   paper: ExamPaper;
@@ -139,7 +140,7 @@ export default function AuthenticExamPanel({ paper, userId }: AuthenticExamPanel
       <div className={`rounded-xl border p-4 ${itemBg}`}>
         <h4 className={`font-bold text-sm ${textColor}`}>Your submissions</h4>
         {loading ? (
-          <p className={`text-xs mt-2 ${mutedColor}`}>Loading...</p>
+          <Spinner />
         ) : submissions.length === 0 ? (
           <p className={`text-xs mt-2 ${mutedColor}`}>No submissions yet for this paper.</p>
         ) : (

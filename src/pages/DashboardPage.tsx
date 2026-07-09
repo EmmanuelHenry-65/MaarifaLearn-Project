@@ -10,6 +10,7 @@ import {
 } from '../services/learning.service';
 import { getAchievementContext, syncEarnedBadges, getEarnedAchievements, getRank, type EarnedAchievement } from '../services/achievements.service';
 import { getTodayStudyTasks, hasConversationToday, type TodayTask } from '../services/dashboard.service';
+import Spinner from '../components/common/Spinner';
 import StatsCards from '../components/StatsCards';
 import ContinueLearning from '../components/ContinueLearning';
 import TodaysMission from '../components/TodaysMission';
@@ -77,7 +78,7 @@ export default function DashboardPage() {
   if (loading) {
     return (
       <div className="flex-1 flex items-center justify-center min-h-0">
-        <p className="text-gray-500">Loading your dashboard...</p>
+        <Spinner size="md" label="Loading your dashboard..." />
       </div>
     );
   }

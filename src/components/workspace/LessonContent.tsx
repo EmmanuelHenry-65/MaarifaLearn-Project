@@ -23,6 +23,7 @@ import {
 import { useTheme } from '../../context/ThemeContext';
 import { forceDownloadUrl } from '../../utils/download';
 import VideoModal from '../common/VideoModal';
+import Spinner from '../common/Spinner';
 
 interface LessonContentProps {
   subject: WorkspaceSubject;
@@ -35,7 +36,6 @@ interface LessonContentProps {
   resolvedTopicId: string | null;
   progressSummary: SubjectProgressSummary | null;
   progressLoading: boolean;
-  progressBump: number;
   topicProgress: TopicProgressBySlug;
   onProgressBump: () => void;
 }
@@ -51,7 +51,6 @@ export default function LessonContent({
   resolvedTopicId,
   progressSummary,
   progressLoading,
-  progressBump,
   topicProgress,
   onProgressBump,
 }: LessonContentProps) {
@@ -66,11 +65,12 @@ export default function LessonContent({
   const currentLesson = activeLesson ?? subject.units[0].lessons[0];
   const currentTopic = activeTopic ?? currentLesson.topics[0];
 
-  const masteryPercent = progressSummary
-    ? progressSummary.totalTopics
-      ? Math.round((progressSummary.topicsCompleted / progressSummary.totalTopics) * 100)
-      : 0
-    : Math.min(100, subject.progress + progressBump);
+  // Never fall back to workspaceData.ts's placeholder numbers here -- a
+  // student whose progress fetch is slow or empty should see 0/loading,
+  // never a fabricated mastery percentage presented as their real record.
+  const masteryPercent = progressSummary?.totalTopics
+    ? Math.round((progressSummary.topicsCompleted / progressSummary.totalTopics) * 100)
+    : 0;
 
   if (activeMode === 'overview') {
     return (
@@ -81,9 +81,9 @@ export default function LessonContent({
           <div className="mt-4 grid grid-cols-4 gap-3">
             <Metric
               title="Topics"
-              value={progressLoading ? '…' : progressSummary ? `${progressSummary.topicsCompleted}/${progressSummary.totalTopics}` : `${subject.lessonsCompleted}/${subject.totalLessons}`}
+              value={progressLoading ? '…' : progressSummary ? `${progressSummary.topicsCompleted}/${progressSummary.totalTopics}` : '0/0'}
             />
-            <Metric title="Started" value={progressLoading ? '…' : progressSummary ? `${progressSummary.topicsStarted}` : '—'} />
+            <Metric title="Started" value={progressLoading ? '…' : progressSummary ? `${progressSummary.topicsStarted}` : '0'} />
             <Metric title="Mastery" value={progressLoading ? '…' : progressSummary ? `${progressSummary.averageMastery}%` : `${masteryPercent}%`} />
             <Metric title="Last Studied" value={progressLoading ? '…' : formatRelative(progressSummary?.lastAccessedAt ?? null)} />
           </div>
@@ -185,7 +185,7 @@ export default function LessonContent({
       <div className="glass-card p-5">
         <h3 className={`font-bold text-lg mb-4 ${textColor}`}>Progress Dashboard</h3>
         {progressLoading ? (
-          <p className={`text-sm ${mutedColor}`}>Loading...</p>
+          <Spinner />
         ) : progressSummary ? (
           <div className="grid grid-cols-2 gap-3">
             <Metric title="Topics Completed" value={`${progressSummary.topicsCompleted}/${progressSummary.totalTopics}`} />
@@ -262,7 +262,7 @@ function LessonViewerPanel({
     <div className={`rounded-2xl border p-5 ${panelBg}`}>
       <h4 className={`font-bold text-base ${textColor}`}>Lesson Viewer</h4>
       {loading ? (
-        <p className={`mt-2 text-sm ${mutedColor}`}>Loading...</p>
+        <Spinner />
       ) : explanation ? (
         <>
           <p className={`mt-2 text-sm leading-relaxed whitespace-pre-line ${mutedColor}`}>{explanation}</p>
@@ -320,7 +320,7 @@ function FlashcardsPanel({
     return (
       <div className="glass-card p-5">
         <h3 className={`font-bold text-lg mb-2 ${textColor}`}>Flashcards</h3>
-        <p className={`text-sm ${mutedColor}`}>Loading...</p>
+        <Spinner />
       </div>
     );
   }
@@ -430,7 +430,7 @@ function NotesPanel({
         className={`w-full min-h-[90px] rounded-xl border p-3 text-sm focus:outline-none focus:border-cyan-500/40 ${panelBg}`}
       />
       {loading ? (
-        <p className={`text-sm mt-4 ${mutedColor}`}>Loading...</p>
+        <Spinner />
       ) : notes.length === 0 ? (
         <p className={`text-sm mt-4 ${mutedColor}`}>No notes yet for this topic — add one above.</p>
       ) : (
@@ -479,7 +479,7 @@ function PastQuestionsPanel({ subject, textColor, mutedColor, panelBg }: { subje
         <Link to="/exams" className="px-3 py-2 rounded-lg bg-cyan-500/10 border border-cyan-500/20 text-cyan-600 text-xs font-bold">Open Exam Center</Link>
       </div>
       {loading ? (
-        <p className={`text-sm ${mutedColor}`}>Loading...</p>
+        <Spinner />
       ) : questions.length === 0 ? (
         <p className={`text-sm ${mutedColor}`}>No past-paper questions found for {subject.name} yet.</p>
       ) : (
@@ -521,7 +521,7 @@ function BookmarksPanel({ userId, subject, textColor, mutedColor, panelBg }: { u
     <div className="glass-card p-5">
       <h3 className={`font-bold text-lg mb-4 ${textColor}`}>Bookmarked Topics</h3>
       {loading ? (
-        <p className={`text-sm ${mutedColor}`}>Loading...</p>
+        <Spinner />
       ) : bookmarks.length === 0 ? (
         <p className={`text-sm ${mutedColor}`}>No bookmarked topics yet for {subject.name}.</p>
       ) : (
@@ -577,7 +577,7 @@ function ResourcePanel({
       </div>
 
       {loading ? (
-        <p className={`text-sm ${mutedColor}`}>Loading...</p>
+        <Spinner />
       ) : items.length === 0 ? (
         <p className={`text-sm ${mutedColor}`}>No {mode === 'videos' ? 'videos' : 'resources'} uploaded for {subject.name} yet.</p>
       ) : (

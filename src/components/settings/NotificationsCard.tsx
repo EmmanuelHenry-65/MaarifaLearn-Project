@@ -3,6 +3,7 @@ import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import { getNotifications, markAllRead, type AppNotification, type NotificationType } from '../../services/notifications.service';
 import { formatRelativeTime } from '../../utils/time';
+import Spinner from '../common/Spinner';
 
 const TYPE_ICON: Record<NotificationType, string> = {
   system: '⚙️',
@@ -57,7 +58,7 @@ export default function NotificationsCard() {
       </div>
 
       {loading ? (
-        <p className={`text-sm text-center py-6 ${labelColor}`}>Loading...</p>
+        <Spinner />
       ) : loadError ? (
         <p className="text-sm text-center py-6 text-red-500">{loadError}</p>
       ) : notifications.length === 0 ? (
