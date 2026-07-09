@@ -136,7 +136,7 @@ export default function LessonContent({
             })}
           </div>
         </div>
-        <LessonViewerPanel topicId={resolvedTopicId} textColor={textColor} mutedColor={mutedColor} panelBg={panelBg} softBg={softBg} onProgressBump={onProgressBump} />
+        <LessonViewerPanel topicId={resolvedTopicId} textColor={textColor} mutedColor={mutedColor} panelBg={panelBg} softBg={softBg} />
       </div>
     );
   }
@@ -220,14 +220,12 @@ function LessonViewerPanel({
   mutedColor,
   panelBg,
   softBg,
-  onProgressBump,
 }: {
   topicId: string | null;
   textColor: string;
   mutedColor: string;
   panelBg: string;
   softBg: string;
-  onProgressBump: () => void;
 }) {
   const [explanation, setExplanation] = useState<string | null>(null);
   const [workedExample, setWorkedExample] = useState<string | null>(null);
@@ -280,13 +278,6 @@ function LessonViewerPanel({
           Real lesson content for this topic hasn't been written yet — check back soon.
         </p>
       )}
-      <div className="mt-4 grid grid-cols-2 gap-3">
-        {['Highlight key sentence', 'Bookmark lesson', 'Open worked example', 'Start reflection'].map((action) => (
-          <button key={action} onClick={onProgressBump} className="px-3 py-2 rounded-lg bg-cyan-500/10 border border-cyan-500/20 text-cyan-600 text-xs font-bold hover:bg-cyan-500/20 transition-colors">
-            {action}
-          </button>
-        ))}
-      </div>
     </div>
   );
 }

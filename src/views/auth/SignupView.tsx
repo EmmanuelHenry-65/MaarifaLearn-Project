@@ -24,6 +24,7 @@ export default function SignupView() {
   // UI State
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [googleNote, setGoogleNote] = useState(false);
 
   async function handleSignup(e: React.FormEvent) {
     e.preventDefault();
@@ -114,8 +115,11 @@ export default function SignupView() {
         />
 
         <label className="flex items-start gap-2 text-xs text-gray-400 cursor-pointer">
+          {/* `required` makes the browser block submission until this is
+              actually ticked -- previously it was decorative. */}
           <input
             type="checkbox"
+            required
             className="mt-0.5 rounded bg-[rgba(17,24,50,0.6)] border-[rgba(56,78,135,0.3)]"
           />
           I agree to the Terms of Service and Privacy Policy.
@@ -139,7 +143,9 @@ export default function SignupView() {
           </div>
         </div>
 
-        <AuthButton variant="secondary" type="button">
+        {/* Google OAuth is on hold (mentor decision) until the provider is
+            configured in Supabase — shown honestly instead of as a dead button. */}
+        <AuthButton variant="secondary" type="button" onClick={() => setGoogleNote(true)}>
           <svg className="w-5 h-5" viewBox="0 0 24 24">
             <path
               fill="currentColor"
@@ -160,6 +166,9 @@ export default function SignupView() {
           </svg>
           Continue with Google
         </AuthButton>
+        {googleNote && (
+          <p className="text-xs text-center text-gray-500">Google sign-up is coming soon — please use your email and password for now.</p>
+        )}
       </form>
 
       <p className={`text-center text-sm ${mutedColor}`}>

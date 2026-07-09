@@ -300,25 +300,49 @@ export async function getReviewQuestions(attemptId: string): Promise<ExamQuestio
   }));
 }
 
+export interface StartedAttempt {
+  id: string;
+  /** When the attempt was originally started -- resuming keeps the first start time, so the exam timer can't be reset by reloading. */
+  startedAt: string;
+}
+
 /** Resumes the user's existing in-progress attempt on this paper if one exists, otherwise starts a new one. */
-export async function startAttempt(userId: string, paperId: string): Promise<string> {
-  const { data: existing, error: findError } = await supabase
-    .from('exam_attempts')
-    .select('id')
-    .eq('profile_id', userId)
-    .eq('paper_id', paperId)
-    .eq('status', 'in_progress')
-    .maybeSingle();
-  if (findError) throw findError;
-  if (existing) return existing.id;
+export async function startAttempt(userId: string, paperId: string): Promise<StartedAttempt> {
+  // order+limit instead of maybeSingle so that even if duplicate in-progress
+  // rows somehow exist, we resume the newest instead of throwing forever.
+  const findExisting = async () => {
+    const { data, error } = await supabase
+      .from('exam_attempts')
+      .select('id, started_at')
+      .eq('profile_id', userId)
+      .eq('paper_id', paperId)
+      .eq('status', 'in_progress')
+      .order('started_at', { ascending: false })
+      .limit(1)
+      .returns<{ id: string; started_at: string }[]>();
+    if (error) throw error;
+    return data?.[0] ?? null;
+  };
+
+  const existing = await findExisting();
+  if (existing) return { id: existing.id, startedAt: existing.started_at };
 
   const { data, error } = await supabase
     .from('exam_attempts')
     .insert({ profile_id: userId, paper_id: paperId, status: 'in_progress' })
-    .select('id')
-    .single();
-  if (error) throw error;
-  return data.id;
+    .select('id, started_at')
+    .single<{ id: string; started_at: string }>();
+
+  // 23505 = unique violation on exam_attempts_one_in_progress: a concurrent
+  // call (e.g. a double-click) won the insert race -- resume its attempt.
+  if (error) {
+    if (error.code === '23505') {
+      const winner = await findExisting();
+      if (winner) return { id: winner.id, startedAt: winner.started_at };
+    }
+    throw error;
+  }
+  return { id: data.id, startedAt: data.started_at };
 }
 
 /**

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { ExamPaper, ExamQuestion } from '../../services/examinations.service';
 import type { ExamMode } from '../../views/ExamsView';
 import { useTheme } from '../../context/ThemeContext';
@@ -8,6 +8,8 @@ interface ExamInterfaceProps {
   paper: ExamPaper;
   questions: ExamQuestion[];
   mode: ExamMode;
+  /** Epoch ms of when the attempt was ORIGINALLY started -- resumed attempts must keep counting from there, not restart. */
+  startedAt: number;
   answers: Record<string, string>;
   flags: Record<string, boolean>;
   bookmarks: Record<string, boolean>;
@@ -19,12 +21,17 @@ interface ExamInterfaceProps {
   onQuestionChange: (question: ExamQuestion) => void;
 }
 
-export default function ExamInterface({ paper, questions, mode, answers, flags, bookmarks, onAnswer, onToggleFlag, onToggleBookmark, onSubmit, onOpenAI, onQuestionChange }: ExamInterfaceProps) {
+export default function ExamInterface({ paper, questions, mode, startedAt, answers, flags, bookmarks, onAnswer, onToggleFlag, onToggleBookmark, onSubmit, onOpenAI, onQuestionChange }: ExamInterfaceProps) {
   const { theme } = useTheme();
   const [index, setIndex] = useState(0);
-  const [remaining, setRemaining] = useState((paper.durationMinutes ?? 60) * 60);
+  // Seed the countdown from the attempt's real start time so a reload or
+  // tab-close can't reset the clock on a timed paper.
+  const [remaining, setRemaining] = useState(() =>
+    Math.max(0, (paper.durationMinutes ?? 60) * 60 - Math.floor((Date.now() - startedAt) / 1000)),
+  );
   const [paused, setPaused] = useState(false);
   const [tool, setTool] = useState<string | null>(null);
+  const autoSubmittedRef = useRef(false);
 
   const question = questions[index];
   const answeredCount = questions.filter((item) => answers[item.id]?.trim()).length;
@@ -42,8 +49,14 @@ export default function ExamInterface({ paper, questions, mode, answers, flags, 
     return () => window.clearInterval(id);
   }, [paused, remaining]);
 
+  // Auto-submit exactly once at expiry. Without the ref, this effect re-fires
+  // every time the parent re-renders during the (async) submit -- onSubmit
+  // gets a new identity while remaining is still 0 -- and double-submits.
   useEffect(() => {
-    if (remaining === 0) onSubmit();
+    if (remaining === 0 && !autoSubmittedRef.current) {
+      autoSubmittedRef.current = true;
+      onSubmit();
+    }
   }, [onSubmit, remaining]);
 
   const minutes = Math.floor(remaining / 60).toString().padStart(2, '0');

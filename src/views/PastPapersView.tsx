@@ -144,12 +144,14 @@ export default function PastPapersView() {
     setOpenMenuId(null);
   };
 
+  // ?q= is the deep-link AITutorView actually reads (router state was silently
+  // ignored, throwing the typed question away) -- it asks the question on arrival.
   const handleSendAI = () => {
     if (!aiQuestion.trim()) return;
-    navigate('/ai-tutor', { state: { prefillQuestion: aiQuestion } });
+    navigate(`/ai-tutor?q=${encodeURIComponent(aiQuestion)}`);
   };
 
-  const handleQuickPrompt = (question: string) => navigate('/ai-tutor', { state: { prefillQuestion: question } });
+  const handleQuickPrompt = (question: string) => navigate(`/ai-tutor?q=${encodeURIComponent(question)}`);
 
   if (loading && papers.length === 0) {
     return (

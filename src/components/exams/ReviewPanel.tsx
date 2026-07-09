@@ -15,14 +15,23 @@ interface ReviewPanelProps {
 export default function ReviewPanel({ paper, questions, answers, gradedAnswers, onBackToResults, onOpenRelatedLesson, onGenerateSimilar }: ReviewPanelProps) {
   const { theme } = useTheme();
   const [activeIndex, setActiveIndex] = useState(0);
-  const question = questions[activeIndex];
-  const graded = gradedAnswers.find((a) => a.questionId === question.id);
+  const question = questions[activeIndex] ?? questions[0];
+  const graded = question ? gradedAnswers.find((a) => a.questionId === question.id) : undefined;
   const textColor = theme === 'light' ? 'text-slate-900' : 'text-white';
   const mutedColor = theme === 'light' ? 'text-slate-500' : 'text-gray-400';
   const panelBg = theme === 'light' ? 'bg-white border-slate-200 shadow-sm' : 'bg-[rgba(17,24,50,0.55)] border-[rgba(56,78,135,0.18)]';
 
   const resultLabel = graded === undefined ? 'Not answered' : graded.isCorrect === true ? 'Correct' : graded.isCorrect === false ? 'Incorrect' : 'Pending review';
   const resultColor = graded?.isCorrect === true ? textColor : graded?.isCorrect === false ? 'text-red-500' : textColor;
+
+  if (!question) {
+    return (
+      <div className="glass-card p-6 flex-1 flex flex-col items-center justify-center gap-3">
+        <p className={`text-sm ${mutedColor}`}>No questions to review for this attempt.</p>
+        <button onClick={onBackToResults} className="px-4 py-2 rounded-lg bg-slate-500/10 border border-slate-500/20 text-slate-500 text-xs font-bold">Back to Results</button>
+      </div>
+    );
+  }
 
   return (
     <div className="flex gap-4 flex-1 min-h-0">

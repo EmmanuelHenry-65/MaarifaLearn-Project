@@ -215,18 +215,27 @@ export async function syncEarnedBadges(userId: string, ctx: AchievementContext):
     badge: badge.key,
   }));
 
-  const { error } = await supabase
+  // .select() after an ignoreDuplicates upsert returns ONLY the rows this
+  // call actually inserted -- so when two checks race (e.g. topic access and
+  // a progress bump landing together), exactly one of them "wins" each badge
+  // and the loser gets [] back, instead of both celebrating and notifying.
+  const { data: inserted, error } = await supabase
     .from('achievements')
-    .upsert(rows, { onConflict: 'profile_id,title', ignoreDuplicates: true });
+    .upsert(rows, { onConflict: 'profile_id,title', ignoreDuplicates: true })
+    .select('title')
+    .returns<{ title: string }[]>();
   if (error) throw error;
 
+  const insertedTitles = new Set((inserted ?? []).map((row) => row.title));
+  const actuallyEarned = newlyEarned.filter((badge) => insertedTitles.has(badge.name));
+
   await Promise.all(
-    newlyEarned.map((badge) =>
+    actuallyEarned.map((badge) =>
       createNotification(userId, `New badge earned: ${badge.name}`, badge.desc, 'achievement').catch(() => {}),
     ),
   );
 
-  return newlyEarned;
+  return actuallyEarned;
 }
 
 /**

@@ -125,7 +125,11 @@ export default function TopNav({ title, subtitle, onMenuClick }: TopNavProps) {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user]);
+    // Key on the stable id, not the user object -- AuthContext hands out a new
+    // object on every TOKEN_REFRESHED event, which would needlessly tear down
+    // and re-create the realtime channel every ~hour.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id]);
 
   function showComingSoon(message: string) {
     setComingSoon(message);

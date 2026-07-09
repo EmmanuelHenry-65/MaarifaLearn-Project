@@ -105,7 +105,7 @@ Deno.serve(async (req) => {
       error: userError,
     } = await userClient.auth.getUser();
     if (userError || !user) {
-      return new Response(JSON.stringify({ error: 'Not authenticated' }), { status: 401, headers: CORS_HEADERS });
+      return new Response(JSON.stringify({ error: 'Not authenticated' }), { status: 401, headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' } });
     }
 
     // RLS on exam_submissions already scopes SELECT to profile_id = auth.uid(),
@@ -120,7 +120,7 @@ Deno.serve(async (req) => {
       .eq('id', submissionId)
       .maybeSingle<{ id: string; paper_id: string; file_path: string; status: string }>();
     if (submissionError || !submission) {
-      return new Response(JSON.stringify({ error: 'Submission not found or not yours' }), { status: 404, headers: CORS_HEADERS });
+      return new Response(JSON.stringify({ error: 'Submission not found or not yours' }), { status: 404, headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' } });
     }
 
     // Service-role client -- only this can update exam_submissions (students have
@@ -130,6 +130,13 @@ Deno.serve(async (req) => {
 
     const { error: markReviewingError } = await adminClient.from('exam_submissions').update({ status: 'ai_reviewing' }).eq('id', submissionId);
     if (markReviewingError) throw new Error(`Failed to update submission status (check service_role grants on exam_submissions): ${markReviewingError.message}`);
+
+    // From here on the row says 'ai_reviewing' -- if anything below throws
+    // (OpenAI timeout on big scanned PDFs is the common case), put the row
+    // back to 'submitted' so the student sees a retryable state instead of a
+    // spinner that never resolves. The manual Retry Marking button still
+    // exists as a second layer, but recovery shouldn't depend on it.
+    try {
 
     const { data: paper, error: paperError } = await adminClient
       .from('past_papers')
@@ -218,6 +225,15 @@ Deno.serve(async (req) => {
     if (finalUpdateError) throw new Error(`Failed to save marking result (check service_role grants on exam_submissions): ${finalUpdateError.message}`);
 
     return new Response(JSON.stringify({ aiScore, aiPercentage, aiFeedback }), { headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' } });
+
+    } catch (markingError) {
+      try {
+        await adminClient.from('exam_submissions').update({ status: 'submitted' }).eq('id', submissionId);
+      } catch {
+        // Best-effort -- if even the reset fails, the manual Retry button remains.
+      }
+      throw markingError;
+    }
   } catch (err) {
     return new Response(JSON.stringify({ error: err instanceof Error ? err.message : 'Unknown error' }), {
       status: 500,

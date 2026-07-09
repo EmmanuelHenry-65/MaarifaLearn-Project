@@ -100,7 +100,7 @@ export default function SettingsView() {
 
             {activeTab === 'Notifications' && <NotificationsCard />}
 
-            {activeTab === 'Privacy & Security' && <PrivacySecurityCard />}
+            {activeTab === 'Privacy & Security' && <PrivacySecurityCard onRequestDeleteAccount={() => setShowDeleteModal(true)} />}
 
             {activeTab === 'Appearance' && <AppearanceCard />}
 

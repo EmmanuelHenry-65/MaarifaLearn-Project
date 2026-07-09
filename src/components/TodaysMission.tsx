@@ -70,7 +70,9 @@ export default function TodaysMission({ topics, askedAiToday }: TodaysMissionPro
           <span className="text-lg">🎁</span>
           <span className={`text-sm font-medium ${textColor}`}>Reward</span>
         </div>
-        <span className={`font-bold text-sm ${allDone ? 'text-green-500' : 'text-gray-500'}`}>{allDone ? '+50 XP earned!' : '+50 XP'}</span>
+        {/* No XP is actually awarded for missions (XP = completed topics × 50,
+            computed in DashboardPage) -- so don't claim a number. */}
+        <span className={`font-bold text-sm ${allDone ? 'text-green-500' : 'text-gray-500'}`}>{allDone ? 'All missions complete! 🎉' : 'Finish all 3'}</span>
       </div>
     </div>
   );

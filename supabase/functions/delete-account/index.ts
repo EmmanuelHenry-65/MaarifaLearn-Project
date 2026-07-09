@@ -27,11 +27,24 @@ const CORS_HEADERS = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-async function removeAllUnderPrefix(adminClient: ReturnType<typeof createClient>, bucket: string, userId: string) {
-  const { data: files } = await adminClient.storage.from(bucket).list(userId);
-  if (!files || files.length === 0) return;
-  const paths = files.map((f) => `${userId}/${f.name}`);
-  await adminClient.storage.from(bucket).remove(paths);
+// storage.list() is NOT recursive: entries with a null id are subfolders
+// (e.g. `${userId}/exam-submissions/`), and passing a folder path to remove()
+// silently deletes nothing. Walk the tree so nested uploads -- exam answer
+// sheets live at `${userId}/exam-submissions/<file>` -- actually get removed.
+async function removeAllUnderPrefix(adminClient: ReturnType<typeof createClient>, bucket: string, prefix: string) {
+  const { data: entries } = await adminClient.storage.from(bucket).list(prefix, { limit: 1000 });
+  if (!entries || entries.length === 0) return;
+
+  const files: string[] = [];
+  for (const entry of entries) {
+    const path = `${prefix}/${entry.name}`;
+    if (entry.id === null) {
+      await removeAllUnderPrefix(adminClient, bucket, path);
+    } else {
+      files.push(path);
+    }
+  }
+  if (files.length > 0) await adminClient.storage.from(bucket).remove(files);
 }
 
 Deno.serve(async (req) => {
@@ -47,19 +60,31 @@ Deno.serve(async (req) => {
       error: userError,
     } = await userClient.auth.getUser();
     if (userError || !user) {
-      return new Response(JSON.stringify({ error: 'Not authenticated' }), { status: 401, headers: CORS_HEADERS });
+      return new Response(JSON.stringify({ error: 'Not authenticated' }), { status: 401, headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' } });
     }
 
     const adminClient = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
 
+    // Must happen BEFORE deleteUser: the profiles cascade would SET NULL these
+    // rows' profile_id, turning personal uploads into "shared" documents.
     const { error: docsError } = await adminClient.from('knowledge_documents').delete().eq('profile_id', user.id);
     if (docsError) throw new Error(`Failed to delete knowledge documents (check service_role grants): ${docsError.message}`);
 
-    await removeAllUnderPrefix(adminClient, 'avatars', user.id);
-    await removeAllUnderPrefix(adminClient, 'documents', user.id);
-
+    // Delete the auth user first (cascades through profiles to all DB rows).
+    // If THIS fails, nothing else has been touched yet, so the account is
+    // left intact rather than half-deleted.
     const { error: deleteError } = await adminClient.auth.admin.deleteUser(user.id);
     if (deleteError) throw new Error(`Failed to delete account: ${deleteError.message}`);
+
+    // Storage cleanup last, best-effort: the paths are keyed by the (now
+    // deleted) user's id string, so this still works after deleteUser, and a
+    // failure here only leaves orphaned files -- never a half-alive account.
+    try {
+      await removeAllUnderPrefix(adminClient, 'avatars', user.id);
+      await removeAllUnderPrefix(adminClient, 'documents', user.id);
+    } catch {
+      // Orphaned files can be swept manually; the account itself is gone.
+    }
 
     return new Response(JSON.stringify({ success: true }), { headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' } });
   } catch (err) {
