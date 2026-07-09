@@ -3,7 +3,7 @@ import { useState } from "react";
 import AuthInput from "../../components/auth/AuthInput";
 import AuthButton from "../../components/auth/AuthButton";
 import { useTheme } from "../../context/ThemeContext";
-import { signup } from "../../services/auth.service";
+import { signup, signInWithGoogle } from "../../services/auth.service";
 
 export default function SignupView() {
   const { theme } = useTheme();
@@ -24,7 +24,17 @@ export default function SignupView() {
   // UI State
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [googleNote, setGoogleNote] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
+
+  async function handleGoogleSignup() {
+    setError("");
+    setGoogleLoading(true);
+    const { error: googleError } = await signInWithGoogle();
+    if (googleError) {
+      setError(googleError.message);
+      setGoogleLoading(false);
+    }
+  }
 
   async function handleSignup(e: React.FormEvent) {
     e.preventDefault();
@@ -143,9 +153,7 @@ export default function SignupView() {
           </div>
         </div>
 
-        {/* Google OAuth is on hold (mentor decision) until the provider is
-            configured in Supabase — shown honestly instead of as a dead button. */}
-        <AuthButton variant="secondary" type="button" onClick={() => setGoogleNote(true)}>
+        <AuthButton variant="secondary" type="button" disabled={googleLoading} onClick={handleGoogleSignup}>
           <svg className="w-5 h-5" viewBox="0 0 24 24">
             <path
               fill="currentColor"
@@ -164,11 +172,8 @@ export default function SignupView() {
               d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
             />
           </svg>
-          Continue with Google
+          {googleLoading ? "Redirecting to Google..." : "Continue with Google"}
         </AuthButton>
-        {googleNote && (
-          <p className="text-xs text-center text-gray-500">Google sign-up is coming soon — please use your email and password for now.</p>
-        )}
       </form>
 
       <p className={`text-center text-sm ${mutedColor}`}>
