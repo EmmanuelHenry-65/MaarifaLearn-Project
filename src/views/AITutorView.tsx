@@ -398,6 +398,25 @@ export default function AITutorView() {
                     <BotAvatar />
                     <div className="max-w-[75%] bg-[#1e293b] border border-[rgba(100,130,200,0.35)] rounded-2xl rounded-tl-sm px-4 py-2.5 shadow-sm">
                       <p className="text-gray-100 text-sm leading-relaxed">{msg.content}</p>
+                      {msg.sources && msg.sources.length > 0 && (
+                        <div className="mt-2 pt-2 border-t border-[rgba(100,130,200,0.2)]">
+                          <p className="text-[10px] font-bold uppercase tracking-wider text-gray-500 mb-1.5">Sourced from</p>
+                          <div className="flex flex-wrap gap-1.5">
+                            {msg.sources.map((source) => (
+                              <span
+                                key={source.title}
+                                className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-semibold ${
+                                  source.isCurriculum
+                                    ? 'bg-cyan-500/10 border border-cyan-500/25 text-cyan-300'
+                                    : 'bg-purple-500/10 border border-purple-500/25 text-purple-300'
+                                }`}
+                              >
+                                {source.isCurriculum ? '📄' : '🗒️'} {source.title}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
                 ),

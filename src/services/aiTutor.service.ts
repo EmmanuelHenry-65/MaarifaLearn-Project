@@ -8,12 +8,19 @@ export interface TutorAttachment {
 
 export type MessageSender = 'user' | 'assistant';
 
+export interface TutorSource {
+  title: string;
+  isCurriculum: boolean;
+}
+
 export interface TutorMessage {
   id: string;
   sender: MessageSender;
   content: string;
   createdAt: string;
   attachment: TutorAttachment | null;
+  /** Real documents the AI Tutor's RAG pipeline actually retrieved for this answer -- null for user messages or if retrieval found nothing. */
+  sources: TutorSource[] | null;
 }
 
 export interface TutorSession {
@@ -54,6 +61,7 @@ interface RawMessageRow {
   created_at: string;
   attachment_path: string | null;
   attachment_name: string | null;
+  sources: TutorSource[] | null;
 }
 
 interface RawConversationRow {
@@ -76,6 +84,7 @@ function toTutorMessage(row: RawMessageRow, signedUrlByPath: Map<string, string>
           signedUrl: signedUrlByPath.get(row.attachment_path) ?? null,
         }
       : null,
+    sources: row.sources && row.sources.length > 0 ? row.sources : null,
   };
 }
 
@@ -101,7 +110,7 @@ export async function uploadAttachment(userId: string, file: File): Promise<Tuto
 export async function getRecentSessions(limit = 10): Promise<TutorSession[]> {
   const { data, error } = await supabase
     .from('conversations')
-    .select('id, title, created_at, messages ( id, sender, content, created_at, attachment_path, attachment_name )')
+    .select('id, title, created_at, messages ( id, sender, content, created_at, attachment_path, attachment_name, sources )')
     .order('created_at', { ascending: false })
     .limit(limit)
     .returns<RawConversationRow[]>();
@@ -169,13 +178,14 @@ export async function askTutor(
       attachment_path: attachment?.path ?? null,
       attachment_name: attachment?.name ?? null,
     })
-    .select('id, sender, content, created_at, attachment_path, attachment_name')
+    .select('id, sender, content, created_at, attachment_path, attachment_name, sources')
     .single<RawMessageRow>();
   if (userMsgError) throw userMsgError;
 
   let answer = FALLBACK_ANSWER;
+  let sources: TutorSource[] = [];
   try {
-    const { data, error } = await supabase.functions.invoke<{ answer: string; error?: string }>('ai-tutor-chat', {
+    const { data, error } = await supabase.functions.invoke<{ answer: string; sources?: TutorSource[]; error?: string }>('ai-tutor-chat', {
       body: {
         conversationId,
         question: displayText,
@@ -186,14 +196,15 @@ export async function askTutor(
     });
     if (error) throw error;
     if (data?.answer) answer = data.answer;
+    if (data?.sources) sources = data.sources;
   } catch (err) {
     console.error('ai-tutor-chat failed:', err);
   }
 
   const { data: assistantRowData, error: assistantMsgError } = await supabase
     .from('messages')
-    .insert({ conversation_id: conversationId, sender: 'assistant', content: answer })
-    .select('id, sender, content, created_at, attachment_path, attachment_name')
+    .insert({ conversation_id: conversationId, sender: 'assistant', content: answer, sources: sources.length > 0 ? sources : null })
+    .select('id, sender, content, created_at, attachment_path, attachment_name, sources')
     .single<RawMessageRow>();
   if (assistantMsgError) throw assistantMsgError;
 
