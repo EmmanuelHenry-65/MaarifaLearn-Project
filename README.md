@@ -9,7 +9,7 @@
 [![Stack](https://img.shields.io/badge/stack-React%2019%20%2B%20TypeScript-0891b2)](#tech-stack)
 [![Backend](https://img.shields.io/badge/backend-Supabase-3ecf8e)](#tech-stack)
 [![AI](https://img.shields.io/badge/AI-OpenAI%20%2B%20RAG-412991)](#how-it-works)
-[![Status](https://img.shields.io/badge/status-live%20pilot-brightgreen)](#-live-demo)
+[![Status](https://img.shields.io/badge/status-live%20pilot-brightgreen)](https://maarifalearn-q88b.onrender.com)
 
 [Live demo](https://maarifalearn-q88b.onrender.com) · [Report an issue](../../issues) · [Roadmap](#-roadmap)
 
@@ -33,6 +33,8 @@ Maarifa Learn puts a Kenyan Grade 10 student's entire academic life in one place
 | 📊 **Progress that's actually real** | Every streak, mastery score, and "topics completed" number is computed from real study activity — never a placeholder. |
 | 🗂️ **A living resource library** | Curriculum notes, pamphlets, and videos across all 9 subjects, searchable and downloadable. |
 | 🔔 **Smart study planning** | A real task planner with due-date reminders and achievement tracking. |
+| 📱 **Mobile & tablet ready** | Every page reflows for phones and tablets — no cramped or overlapping layouts. |
+| 🔐 **Google Sign-In** | One-tap sign-in alongside email/password, backed by real Supabase OAuth. |
 
 ---
 
@@ -152,13 +154,14 @@ supabase/functions/ # Edge Functions (Deno)
 
 ## 🚧 Roadmap
 
-Built and verified working: authentication, the AI Tutor with RAG + citations, both exam modes with AI marking, study planning, notifications, achievements, and a real resource library.
+Built and verified working: authentication (including Google Sign-In), the AI Tutor with RAG + citations, both exam modes with AI marking, study planning, notifications, achievements, a real resource library, and a fully responsive layout across desktop, tablet, and mobile.
 
 Honestly not built yet (shown as "coming soon" in the app, never faked):
 - A grade/subject onboarding flow for new signups
 - Structured, replayable AI-generated quizzes and flashcard decks (today's "Generate Quiz" is a great chat answer, not a saved deck)
 - Practice mode and worksheets (no data model yet)
-- Google Sign-In is wired up but gated on provider setup per deployment
+
+> Google Sign-In needs its own OAuth credentials configured in Supabase for each new deployment — it's fully wired up in code, just not something a fresh `git clone` gets for free.
 
 ## Team
 
